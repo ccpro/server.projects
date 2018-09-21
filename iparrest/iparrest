@@ -1,0 +1,190 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Data::Dumper;
+use File::Tail;
+#use DBI;
+#use lib qw'/usr/local/www/Modules/';
+#use DBConfig;
+use Sys::Syslog qw(:DEFAULT setlogsock);
+setlogsock 'unix';
+use Getopt::Long;
+use Proc::Daemon;
+use Cwd;
+use File::Spec::Functions;
+use FileHandle;
+
+sub buildFileName($);
+sub addIpAddress($$);
+sub rebuildRirewallRules($);
+
+my $cfg = {
+   ip_list  => {},
+   iface    => 're0',
+   natd     => '/usr/local/etc/rc.d/fw.sh',
+   filename => '',
+   keep_running => 1
+};
+
+my $pf = '/var/run/iparrest.pid';
+my $daemon = Proc::Daemon->new(
+    pid_file => $pf,
+    work_dir => getcwd()
+);
+
+# are you running?  Returns 0 if not.
+my $pid = $daemon->Status($pf);
+my $daemonize = 1;
+
+#Getopt::Long::Configure("permute");
+
+GetOptions(
+    'nodaemon' => \$daemonize,
+    'start'    => \&run,
+    'status'   => \&status,
+    'reset'    => \&reload,
+    'stop'     => \&stop,
+    'clean'    => \&clean
+);
+
+#my $s = Dumper($pf, $daemon, $pid, $daemonize);
+#syslog('news.err', $s);
+
+sub stop {
+        if ($pid) {
+            print "stopping pid $pid...\n";
+            if ($daemon->Kill_Daemon($pf)) {
+                print "successfully stopped.\n";
+            } else {
+                print "could not find $pid. was it running?\n";
+            }
+         } else {
+                print "not running, nothing to stop.\n";
+         }
+}
+
+sub clean {
+   print "removed all restrictions\n";
+   rebuildRirewallRules($cfg);
+}
+
+sub status {
+    if ($pid) {
+        print "running with pid $pid.\n";
+        print "busted ".(scalar(keys %{$cfg->{ip_list}}))." ip addresses\n";
+        for my $ip (keys %{$cfg->{ip_list}}) {
+           print "ip: $ip was caught @ ".localtime($cfg->{ip_list}{$ip})."\n";
+        }
+    } else {
+        print "not running.\n";
+    }
+}
+
+sub reload {
+  &stop;
+  $cfg->{ip_list} = {};
+  &run;
+}
+
+sub run {
+
+    my $login = (getpwuid $>);
+    die "must run as root" if $login ne 'root';
+
+    if (!$pid) {
+        print "starting...\n";
+        if ($daemonize) {
+            # when Init happens, everything under it runs in the child process.
+            # this is important when dealing with file handles, due to the fact
+            # Proc::Daemon shuts down all open file handles when Init happens.
+            # Keep this in mind when laying out your program, particularly if
+            # you use filehandles.
+            $daemon->Init;
+        }
+
+        while(1) {
+            my $fname = buildFileName($cfg);
+            syslog('news.err', "going to tail '$fname'");
+
+            my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
+            while (<FH>) {
+               if ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && $1 !~ /^10\.*./) {
+                   syslog('news.err', "new attack found from '$1'");
+                   addIpAddress($cfg, $1);
+               }
+            }
+            sleep 5;
+        }
+    } else {
+        print "already running with pid $pid\n";
+    }
+}
+
+sub buildFileName($)
+{
+ my ($cfg) = @_;
+ my ($month, $year) = (localtime())[4..5];
+ my $fname = sprintf "/var/log/access_log_%d_%02d", $year + 1900, $month + 1;
+
+   $fname;
+}
+
+sub addIpAddress($$)
+{
+ my ($cfg, $ip) = @_;
+
+   unless (exists($cfg->{ip_list}{$ip})) {
+      $cfg->{ip_list}{$ip} = time;
+      rebuildRirewallRules($cfg);
+   }
+}
+
+sub rebuildRirewallRules($)
+{
+   my ($cfg) = @_;
+   my $time = time();
+   my $head = 
+qq^#!/bin/sh
+   
+#/sbin/natd -config /etc/natd.conf
+   
+/sbin/ipfw -f flush
+/sbin/ipfw add divert natd all from any to any via $cfg->{iface}\n
+#/sbin/ipfw add allow tcp from any to any 18081 in\n
+#/sbin/ipfw add fwd 10.1.1.103, 18081 tcp from any to any 18081 in\n
+\n^;
+   my $tail =
+qq^
+
+/sbin/ipfw add allow gre from any to any keep-state
+/sbin/ipfw add pass all from any to any\n^;
+
+   my $rule = "/sbin/ipfw add reject all from %s to any via $cfg->{iface}\n";
+   my $deny_port = "/sbin/ipfw add deny tcp from %s %d to any in recv $cfg->{iface}";
+
+
+   eval {
+       my $fh = FileHandle->new("> /tmp/natd.sh");
+       if (defined $fh) {
+
+           print $fh $head;
+
+           print $fh "#\n# new ip \n#\n";
+
+           for my $ip (keys %{$cfg->{ip_list}}) {
+              next if ($ip =~ /^10\.*./);
+              print $fh sprintf $rule, $ip;
+           }
+           print $fh $tail;
+           $fh->close;
+       }
+   };
+   if ($@) {
+       syslog('news.err', "rebuildRirewallRules: error: $@");
+   }
+
+   `mv $cfg->{natd} $cfg->{natd}.$time.~`;
+   `mv /tmp/natd.sh $cfg->{natd}`; 
+   `chmod u+x $cfg->{natd}`;
+   `$cfg->{natd}`;
+}

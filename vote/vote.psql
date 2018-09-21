@@ -1,0 +1,84 @@
+drop table vote_group;
+drop sequence vote_group_id_seq;
+
+CREATE SEQUENCE vote_group_id_seq;
+create table vote_group (
+   group_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_group_id_seq'),
+   created timestamp not null default current_timestamp,
+   name varchar(64) not null,
+   description varchar(256) not null
+) with OIDs;
+
+drop table vote_person;
+drop sequence vote_person_id_seq;
+
+CREATE SEQUENCE vote_person_id_seq;
+create table vote_person (
+   person_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_person_id_seq'),
+   name varchar(64) not null,
+   created timestamp not null default current_timestamp,
+   login varchar(16) not null,
+   password varchar(32) not null,
+   email varchar(128) not null,
+   login_tag varchar(16) not null,
+   send_email smallint not null default 1
+) with OIDs;
+create index vote_person_login_tag_idx ON vote_person(login_tag);
+
+drop table vote_person_group;
+
+create table vote_person_group (
+   person_id smallint not null references vote_person(person_id),
+   group_id smallint not null references vote_group(group_id)
+) with OIDs;
+
+drop table vote_round;
+drop sequence vote_round_seq_id;
+
+create sequence vote_round_seq_id;
+create table vote_round (
+   vote_round_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_round_seq_id'),
+   group_id smallint not null references vote_group(group_id),
+   date date not null default current_date,
+   done date,
+   limit smallint not null default 3,
+   name varchar(128) not null
+) with OIDs;
+
+drop table vote_item;
+drop sequence vote_item_seq_id;
+
+create sequence vote_item_seq_id;
+create table vote_item (
+   item_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_item_seq_id'),
+   vote_round_id smallint not null references vote_round(vote_round_id),
+   person_id smallint not null references vote_person(person_id),
+   name varchar(128) not null,
+   file_path varchar(256),
+   comment varchar(256),
+   text text
+) with OIDs;
+
+drop table vote_item_value;
+drop sequence vote_item_value_seq_id;
+
+create sequence vote_item_value_seq_id;
+create table vote_item_value (
+   item_value_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_item_value_seq_id'),
+   item_id smallint not null references vote_item(item_id),
+   person_id smallint not null references vote_person(person_id),
+   value smallint NOT NULL,
+   comment text
+) with OIDs;
+
+
+drop table vote_log;
+drop sequence vote_log_seq_id;
+
+create sequence vote_log_seq_id;
+create table vote_log (
+   log_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('vote_log_seq_id'),
+   person_id smallint not null references vote_person(person_id),
+   action varchar(256) not null,
+   date timestamp not null default current_timestamp
+) with OIDs;

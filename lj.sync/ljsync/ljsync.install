@@ -1,0 +1,122 @@
+<?php
+require_once(drupal_get_path('module', 'ljsync') .'/ljsync.inc');
+
+function ljsync_requirements($phase) {
+  $requirements = array();
+
+  // Ensure translations don't break at install time.
+  $t = get_t();
+  
+  if ($phase == 'runtime') {
+
+    // Check existence of cache directory.
+    $ljsync_directory = file_create_path() .'/ljsync';
+    if (!file_check_directory($ljsync_directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+      if (!is_dir($ljsync_directory)) {
+        $requirements['ljsync_directory'] = array(
+          'title' => $t('LiveJournal Sync Directory'),
+          'value' => $t('%p is not a directory or is not readable by the webserver.', array('%p' => $ljsync_directory)),
+          'severity' => REQUIREMENT_ERROR,
+        );
+      }
+      elseif (!is_writable($ljsync_directory)) {
+        $requirements['ljsync_directory'] = array(
+          'title' => $t('LiveJournal Sync Directory'),
+          'value' => $t('%p is not writeable by the webserver.', array('%p' => $ljsync_directory)),
+          'severity' => REQUIREMENT_ERROR,
+        );
+      }
+      else {
+        $requirements['ljsync_directory'] = array(
+          'title' => $t('LiveJournal Sync Directory'),
+          'value' => $t('An unknown error occured.'),
+          'description' => $t('An unknown error occured trying to verify %p is a directory and is writable.', array('%p' => $ljsync_directory)),
+          'severity' => REQUIREMENT_ERROR,
+        );
+      }
+    }
+    
+    // Check existence of temp directory.
+    if (!is_writable(file_directory_temp())) {
+      $requirements['ljsync_temp_directory'] = array(
+        'title' => $t('LiveJournal Sync Temp Directory'),
+        'value' => $t('%p is not writeable by the webserver.', array('%p' => file_directory_temp())),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    
+    // Check for presence of html tidy and curl support.
+    if (!function_exists('curl_init')) {
+      $requirements['ljsync_curl'] = array(
+        'title' => $t('cURL Support for LiveJournal Sync'),
+        'value' => $t('LiveJournal Sync requires <a href="http://php.net/manual/en/book.curl.php">cURL support in PHP</a> to function fully.  Without this, &lt;lj-embed/&gt; contents will not be retrieved.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    if (!function_exists('tidy_repair_string')) {
+      $requirements['ljsync_tidy'] = array(
+        'title' => $t('Tidy Support for LiveJournal Sync'),
+        'value' => $t('LiveJournal Sync requires <a href="http://php.net/manual/en/book.tidy.php">Tidy support in PHP</a> to function fully.  Without this, entry contents may not be formatted correctly.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+  }
+  return $requirements;
+}
+
+function ljsync_install() {
+  drupal_install_schema('ljsync');
+}
+
+function ljsync_schema() {
+  $schema['ljsync'] = array(
+    'fields' => array(
+       'uid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'lj_uname' => array('type' => 'varchar', 'length' => '64', 'not null' => TRUE),
+       'lj_pass' => array('type' => 'varchar', 'length' => '255', 'not null' => TRUE),
+       'active' => array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'disp-width' => '11'),
+       'tags' => array('type' => 'int', 'not null' => FALSE, 'disp-width' => '11')),
+    'primary key' => array('uid'),
+  );
+  $schema['ljsync_node'] = array(
+    'fields' => array(
+       'nid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'jitemid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'anum' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'ditemid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'origin' => array('type' => 'int', 'size' => 'tiny', 'not null' => TRUE, 'default' => LJSYNC_ORIGIN_REMOTE)),
+    'primary key' => array('nid'),
+    'unique keys' => array('unique' => array('nid', 'jitemid', 'ditemid')),
+  );
+  $schema['ljsync_comments'] = array(
+    'fields' => array(
+       'jtalkid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11'),
+       'cid' => array('type' => 'int', 'not null' => TRUE, 'disp-width' => '11')),
+    'primary key' => array('jtalkid'),
+    'unique keys' => array('unique' => array('jtalkid', 'cid')),
+  );
+  return $schema;
+}
+
+function ljsync_uninstall() {
+  drupal_uninstall_schema('ljsync');
+}
+
+/** Remove max_create and dumpfile columns from user settings. */
+function ljsync_update_6001() {
+  $ret = array();
+  db_drop_field($ret, 'ljsync', 'max_create');
+  db_drop_field($ret, 'ljsync', 'dumpfile');
+  db_create_table($ret, 'ljsync', $schema['ljsync']);
+  return $ret;
+}
+
+/** Add origin column to ljsync_node table, and add unique keys to the
+    ljsync_node and ljsync_comments tables. */
+function ljsync_update_6002() {
+  $ret = array();
+  db_add_field($ret, 'ljsync_node', 'origin', array('type' => 'int', 'size' => 'tiny', 'not null' => TRUE, 'default' => LJSYNC_ORIGIN_REMOTE));
+  db_add_unique_key($ret, 'ljsync_node', 'nid_jitemid_ditemid', array('nid', 'jitemid', 'ditemid'));
+  db_add_unique_key($ret, 'ljsync_comments', 'jtalkid_cid', array('jtalkid', 'cid'));
+  return $ret;
+}

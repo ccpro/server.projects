@@ -1,0 +1,8 @@
+CREATE TABLE upload_log (
+   upload_start   timestamp without time zone		NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   upload_end     timestamp without time zone,
+   file_name      varchar(1024) NOT NULL,
+   upload_size    bigint	NOT NULL DEFAULT 0,
+   ip             varchar(15)  NOT NULL
+) WITH OIDs;
+create index up_log_date_ip on upload_log (date(upload_start), ip);

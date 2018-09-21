@@ -1,0 +1,10 @@
+name = LiveJournal Sync
+description = Sync entries from LiveJournal.
+dependencies[] = ljxp
+core = 6.x
+; Information added by drupal.org packaging script on 2010-08-26
+version = "6.x-1.3"
+core = "6.x"
+project = "ljsync"
+datestamp = "1282831608"
+

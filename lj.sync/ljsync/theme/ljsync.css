@@ -1,0 +1,111 @@
+.front .ntype-blog .blog-entry-header {
+  border-top: solid 1px black;
+  border-collapse: separate;
+}
+table.blog-entry-header td {
+  color: #336699;
+  line-height: 16px;
+}
+table.blog-entry-header td.label {
+  font-weight: bold;
+  width: 60px;
+  padding-left: 0;
+}
+table.blog-entry-header tr.tags td.value ul.links li {
+  padding: 0 .8em 0 0;
+}
+table.blog-entry-header tr.tags td.value ul.links li a {
+  font-family: georgia, serif;
+  font-size: .9em;
+  text-transform: none;
+}
+
+.comment {
+  margin-top: 1.6em;
+}
+.comment * {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+#comments .odd .header {
+  background-color: #A7C7E8;
+}
+#comments .even .header {
+  background-color: #D9E9F9;
+}
+.comment .header {
+  padding: 1px 3px;
+}
+.comment .header .picture {
+  padding-right: .4em;
+}
+.comment .header .picture,
+.comment .header .postinfo {
+  display: inline-block;
+  vertical-align: top;
+}
+.comment .header .subject {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  height: 18px;
+}
+.comment .header .coordinates-and-controls {
+  height: 22px;
+  line-height: 22px;
+}
+.comment .header .coordinates-and-controls span,
+.comment .header .coordinates-and-controls a {
+  height: 22px;
+  line-height: 22px;
+}
+.comment .header .coordinates-and-controls span,
+.comment .header .coordinates-and-controls a,
+.comment .header .controls img {
+  vertical-align: bottom;
+}
+.comment .header .controls {
+  padding-left: 6px;
+}
+.comment .header .ljuser {
+  white-space: nowrap;
+  line-height: 16px;
+}
+.comment .header .ljuser img {
+  vertical-align: bottom;
+  padding-right: 1px;
+} 
+.comment .body {
+  padding: 0 .4em;
+}
+.comment .header a {
+  color: #000066;
+  text-decoration: underline;
+}
+.comment .header .author a {
+  font-weight: bold;
+}
+.comment ul.links li.first {
+  padding-left: .4em;
+}
+.comment ul.links li:before {
+  content: "(";
+}
+.comment ul.links li:after {
+  content: ")";
+}
+.comment ul.links {
+  font-size: 10px;
+}
+.comment ul.links a {
+  color: #000066;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  text-decoration: underline;
+  text-transform: none;
+}
+.lj-link {
+  margin: .4em 0 1em 0;
+  font-size: 80%;
+  font-style: italic;
+  text-align: right;
+  color: #666;
+}

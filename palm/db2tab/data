@@ -1,0 +1,1619 @@
+handle 3, category_count 0, ce 0x804D20C, *ce 0x0
+------------------------------------------
+ftype1 1, record_id 2281511
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1065250800
+start_time Sat Oct  4 00:00:00 2003
+
+ftype5 1, end_time 1065250800
+end_time Sat Oct  4 00:00:00 2003
+
+ftype6 5, padding6 0 description Lunyov Vitalik - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 65535
+constant 1, length 11, class_name CDateOfYear
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 4
+month_index 9
+------------------------------------------
+ftype1 1, record_id 1757219
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1043481600
+start_time Sat Jan 25 00:00:00 2003
+
+ftype5 1, end_time 1043481600
+end_time Sat Jan 25 00:00:00 2003
+
+ftype6 5, padding6 0 description Алейников zhenya - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 25
+month_index 0
+------------------------------------------
+ftype1 1, record_id 1757222
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1065250800
+start_time Sat Oct  4 00:00:00 2003
+
+ftype5 1, end_time 1065250800
+end_time Sat Oct  4 00:00:00 2003
+
+ftype6 5, padding6 0 description Лунёв Виталик - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 4
+month_index 9
+------------------------------------------
+ftype1 1, record_id 1757223
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1064764800
+start_time Sun Sep 28 09:00:00 2003
+
+ftype5 1, end_time 1064779200
+end_time Sun Sep 28 13:00:00 2003
+
+ftype6 5, padding6 0 description Матковский Олег - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 2
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 28
+month_index 8
+------------------------------------------
+ftype1 1, record_id 1757221
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1066719600
+start_time Tue Oct 21 00:00:00 2003
+
+ftype5 1, end_time 1066719600
+end_time Tue Oct 21 00:00:00 2003
+
+ftype6 5, padding6 0 description Калиновский Андрей - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 21
+month_index 9
+------------------------------------------
+ftype1 1, record_id 2281515
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1066374000
+start_time Fri Oct 17 00:00:00 2003
+
+ftype5 1, end_time 1066374000
+end_time Fri Oct 17 00:00:00 2003
+
+ftype6 5, padding6 0 description Каравашкин Андрей - Birthday
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 17
+month_index 9
+------------------------------------------
+ftype1 1, record_id 2281513
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1066460400
+start_time Sat Oct 18 00:00:00 2003
+
+ftype5 1, end_time 1066460400
+end_time Sat Oct 18 00:00:00 2003
+
+ftype6 5, padding6 0 description Русинов Володя - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 18
+month_index 9
+------------------------------------------
+ftype1 1, record_id 2281516
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1093626000
+start_time Fri Aug 27 10:00:00 2004
+
+ftype5 1, end_time 1093636800
+end_time Fri Aug 27 13:00:00 2004
+
+ftype6 5, padding6 0 description It's time change front brake pads
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 2
+[0] exeption_entry 134590468
+[1] exeption_entry 134590468
+repeat_event_flag 65535
+constant 1, length 8, class_name CDayName
+brand 1, interval 1
+end_date 1093935600, first_day_of_week 0
+day_index 5
+------------------------------------------
+ftype1 1, record_id 2281510
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1065250800
+start_time Sat Oct  4 00:00:00 2003
+
+ftype5 1, end_time 1065250800
+end_time Sat Oct  4 00:00:00 2003
+
+ftype6 5, padding6 0 description Прожогин Volodya: - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 4
+month_index 9
+------------------------------------------
+ftype1 1, record_id 2281508
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1043481600
+start_time Sat Jan 25 00:00:00 2003
+
+ftype5 1, end_time 1043481600
+end_time Sat Jan 25 00:00:00 2003
+
+ftype6 5, padding6 0 description Алейников Женя - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 25
+month_index 0
+------------------------------------------
+ftype1 1, record_id 2281490
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1063234800
+start_time Wed Sep 10 16:00:00 2003
+
+ftype5 1, end_time 1063238400
+end_time Wed Sep 10 17:00:00 2003
+
+ftype6 5, padding6 0 description today auction
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1063263600, first_day_of_week 0
+day_index 3
+------------------------------------------
+ftype1 1, record_id 1757233
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1078164000
+start_time Mon Mar  1 10:00:00 2004
+
+ftype5 1, end_time 1078167600
+end_time Mon Mar  1 11:00:00 2004
+
+ftype6 5, padding6 0 description 4 march MS seminar
+event TS2
+admission ticket: 3801039
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1078473600, first_day_of_week 0
+day_index 1
+------------------------------------------
+ftype1 1, record_id 1757234
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1075420800
+start_time Thu Jan 29 16:00:00 2004
+
+ftype5 1, end_time 1075424400
+end_time Thu Jan 29 17:00:00 2004
+
+ftype6 5, padding6 0 description Zhenya bezay
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1075536000, first_day_of_week 0
+day_index 4
+------------------------------------------
+ftype1 1, record_id 1757220
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1068537600
+start_time Tue Nov 11 00:00:00 2003
+
+ftype5 1, end_time 1068537600
+end_time Tue Nov 11 00:00:00 2003
+
+ftype6 5, padding6 0 description Жданов Алексей - Unfiled
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 1
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 11
+month_index 10
+------------------------------------------
+ftype1 1, record_id 1757246
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1087254000
+start_time Mon Jun 14 16:00:00 2004
+
+ftype5 1, end_time 1087254600
+end_time Mon Jun 14 16:10:00 2004
+
+ftype6 5, padding6 0 description No DOubt in Auburn 7pm
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1087369200, first_day_of_week 0
+day_index 1
+------------------------------------------
+ftype1 1, record_id 1757247
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1090450800
+start_time Wed Jul 21 16:00:00 2004
+
+ftype5 1, end_time 1090451400
+end_time Wed Jul 21 16:10:00 2004
+
+ftype6 5, padding6 0 description Diana Krall concert sunday 7pm woodiville
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 60
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1090738800, first_day_of_week 0
+day_index 3
+------------------------------------------
+ftype1 1, record_id 2281496
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061946000
+start_time Tue Aug 26 18:00:00 2003
+
+ftype5 1, end_time 1061956800
+end_time Tue Aug 26 21:00:00 2003
+
+ftype6 5, padding6 0 description repetition with kalinovsky
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1061967600, first_day_of_week 0
+day_index 2
+------------------------------------------
+ftype1 1, record_id 2281480
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1060718400
+start_time Tue Aug 12 13:00:00 2003
+
+ftype5 1, end_time 1060720200
+end_time Tue Aug 12 13:30:00 2003
+
+ftype6 5, padding6 0 description MANDT meeting
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281481
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1060722900
+start_time Tue Aug 12 14:15:00 2003
+
+ftype5 1, end_time 1060725600
+end_time Tue Aug 12 15:00:00 2003
+
+ftype6 5, padding6 0 description CCMC Meeteihg
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281485
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1060912800
+start_time Thu Aug 14 19:00:00 2003
+
+ftype5 1, end_time 1060913700
+end_time Thu Aug 14 19:15:00 2003
+
+ftype6 5, padding6 0 description позвонить туру испрсить как прочитался диск
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281486
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1060977600
+start_time Fri Aug 15 13:00:00 2003
+
+ftype5 1, end_time 1060981200
+end_time Fri Aug 15 14:00:00 2003
+
+ftype6 5, padding6 0 description MTCB meeting
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281475
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061060400
+start_time Sat Aug 16 12:00:00 2003
+
+ftype5 1, end_time 1061064000
+end_time Sat Aug 16 13:00:00 2003
+
+ftype6 5, padding6 0 description next week the husband has a mercedes ride
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281476
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061082000
+start_time Sat Aug 16 18:00:00 2003
+
+ftype5 1, end_time 1061085600
+end_time Sat Aug 16 19:00:00 2003
+
+ftype6 5, padding6 0 description next week the husband has a mercedes ride
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281473
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061578800
+start_time Fri Aug 22 12:00:00 2003
+
+ftype5 1, end_time 1061580600
+end_time Fri Aug 22 12:30:00 2003
+
+ftype6 5, padding6 0 description tomorrow the husband has a mercedes ride
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281474
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061593200
+start_time Fri Aug 22 16:00:00 2003
+
+ftype5 1, end_time 1061595000
+end_time Fri Aug 22 16:30:00 2003
+
+ftype6 5, padding6 0 description tomorrow the husband has a mercedes ride
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281487
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061658000
+start_time Sat Aug 23 10:00:00 2003
+
+ftype5 1, end_time 1061665200
+end_time Sat Aug 23 12:00:00 2003
+
+ftype6 5, padding6 0 description C spot driuiving  conf number SE034062
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281491
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061740800
+start_time Sun Aug 24 09:00:00 2003
+
+ftype5 1, end_time 1061748000
+end_time Sun Aug 24 11:00:00 2003
+
+ftype6 5, padding6 0 description Se280560, se280596, se280608, se280653
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281493
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061859600
+start_time Mon Aug 25 18:00:00 2003
+
+ftype5 1, end_time 1061863200
+end_time Mon Aug 25 19:00:00 2003
+
+ftype6 5, padding6 0 description Ruben coming with broken olympus
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281497
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1061924400
+start_time Tue Aug 26 12:00:00 2003
+
+ftype5 1, end_time 1061928000
+end_time Tue Aug 26 13:00:00 2003
+
+ftype6 5, padding6 0 description позвонить в олимпус и 
+отправить фотоаппарат, сер нум 
+107073916 
+424961
+service order: 0304136765
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281498
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1062081000
+start_time Thu Aug 28 07:30:00 2003
+
+ftype5 1, end_time 1062081600
+end_time Thu Aug 28 07:40:00 2003
+
+ftype6 5, padding6 0 description Send isilo to eugen
+ftype 1, duration 0
+ftype8 5, padding8 0 note ##c
+
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281500
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1062532800
+start_time Tue Sep  2 13:00:00 2003
+
+ftype5 1, end_time 1062540000
+end_time Tue Sep  2 15:00:00 2003
+
+ftype6 5, padding6 0 description Meeting
+1 - lock down business model and bus reqs
+2 - review XML specificatiov
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281499
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1062536400
+start_time Tue Sep  2 14:00:00 2003
+
+ftype5 1, end_time 1062537600
+end_time Tue Sep  2 14:20:00 2003
+
+ftype6 5, padding6 0 description Tomorow concert in celtic baouo 
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281502
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1063155600
+start_time Tue Sep  9 18:00:00 2003
+
+ftype5 1, end_time 1063159200
+end_time Tue Sep  9 19:00:00 2003
+
+ftype6 5, padding6 0 description Ruben will come for  camera
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281489
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1063335600
+start_time Thu Sep 11 20:00:00 2003
+
+ftype5 1, end_time 1063346400
+end_time Thu Sep 11 23:00:00 2003
+
+ftype6 5, padding6 0 description аукцыон 
+5426 russell ave nw
+seattle, wa, 98107
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281503
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1064250000
+start_time Mon Sep 22 10:00:00 2003
+
+ftype5 1, end_time 1064253600
+end_time Mon Sep 22 11:00:00 2003
+
+ftype6 5, padding6 0 description New fannie may format meeting
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281501
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1064703600
+start_time Sat Sep 27 16:00:00 2003
+
+ftype5 1, end_time 1064721600
+end_time Sat Sep 27 21:00:00 2003
+
+ftype6 5, padding6 0 description Bezday
+guest list
+ваня зуля
+саша аня
+игорь алла
+калинвский
+женя
+рома - не будет
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281512
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1066064400
+start_time Mon Oct 13 10:00:00 2003
+
+ftype5 1, end_time 1066068000
+end_time Mon Oct 13 11:00:00 2003
+
+ftype6 5, padding6 0 description CMG meeting
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281517
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1067040000
+start_time Fri Oct 24 17:00:00 2003
+
+ftype5 1, end_time 1067043600
+end_time Fri Oct 24 18:00:00 2003
+
+ftype6 5, padding6 0 description принести калиновскому братву и кольцо
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 10
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 2281519
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1067989200
+start_time Tue Nov  4 15:40:00 2003
+
+ftype5 1, end_time 1067992800
+end_time Tue Nov  4 16:40:00 2003
+
+ftype6 5, padding6 0 description позвонить бабурину и поговорить о покупке
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 9396261
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1070938800
+start_time Mon Dec  8 19:00:00 2003
+
+ftype5 1, end_time 1070942400
+end_time Mon Dec  8 20:00:00 2003
+
+ftype6 5, padding6 0 description Bring win98 cd for angela
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 9396260
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1071025200
+start_time Tue Dec  9 19:00:00 2003
+
+ftype5 1, end_time 1071032400
+end_time Tue Dec  9 21:00:00 2003
+
+ftype6 5, padding6 0 description bring the gift for christmas party
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 1
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757218
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1072231200
+start_time Tue Dec 23 18:00:00 2003
+
+ftype5 1, end_time 1072238400
+end_time Tue Dec 23 20:00:00 2003
+
+ftype6 5, padding6 0 description Отсутствует одна цифра в аккаунте мамы
+4230184025516000416
+call back mercy (415)-442-7183
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757224
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1072817100
+start_time Tue Dec 30 12:45:00 2003
+
+ftype5 1, end_time 1072821600
+end_time Tue Dec 30 14:00:00 2003
+
+ftype6 5, padding6 0 description It's a meeting with pemco agent
+325 eastlake ave e
+13-45
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757226
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1073011800
+start_time Thu Jan  1 18:50:00 2004
+
+ftype5 1, end_time 1073012700
+end_time Thu Jan  1 19:05:00 2004
+
+ftype6 5, padding6 0 description Potato
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757227
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1074013200
+start_time Tue Jan 13 09:00:00 2004
+
+ftype5 1, end_time 1074016800
+end_time Tue Jan 13 10:00:00 2004
+
+ftype6 5, padding6 0 description Deployment of gbio from uat to production
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757228
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1074103200
+start_time Wed Jan 14 10:00:00 2004
+
+ftype5 1, end_time 1074106800
+end_time Wed Jan 14 11:00:00 2004
+
+ftype6 5, padding6 0 description Company product strategy
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757230
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1074564000
+start_time Mon Jan 19 18:00:00 2004
+
+ftype5 1, end_time 1074567600
+end_time Mon Jan 19 19:00:00 2004
+
+ftype6 5, padding6 0 description Call lesha kotov and ask to check out resume
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757232
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1074636000
+start_time Tue Jan 20 14:00:00 2004
+
+ftype5 1, end_time 1074639600
+end_time Tue Jan 20 15:00:00 2004
+
+ftype6 5, padding6 0 description Call vah
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757229
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1074985200
+start_time Sat Jan 24 15:00:00 2004
+
+ftype5 1, end_time 1074988800
+end_time Sat Jan 24 16:00:00 2004
+
+ftype6 5, padding6 0 description Позвонить жене напомнить о столе и стульях
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757235
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1075410000
+start_time Thu Jan 29 13:00:00 2004
+
+ftype5 1, end_time 1075420800
+end_time Thu Jan 29 16:00:00 2004
+
+ftype6 5, padding6 0 description Amzn
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 1
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757225
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1075497600
+start_time Fri Jan 30 13:20:00 2004
+
+ftype5 1, end_time 1075498800
+end_time Fri Jan 30 13:40:00 2004
+
+ftype6 5, padding6 0 description Jonny depp on bravo chanel
+tomorrow 1:30
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757237
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1077557400
+start_time Mon Feb 23 09:30:00 2004
+
+ftype5 1, end_time 1077559500
+end_time Mon Feb 23 10:05:00 2004
+
+ftype6 5, padding6 0 description Route 55at 9:24
+route 36 1av and university at 9:50 john madsen 206-266-2679 
+starts 10.30
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 10
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757243
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1081346400
+start_time Wed Apr  7 07:00:00 2004
+
+ftype5 1, end_time 1081346400
+end_time Wed Apr  7 07:00:00 2004
+
+ftype6 5, padding6 0 description Wake up
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 3
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757238
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1081357200
+start_time Wed Apr  7 10:00:00 2004
+
+ftype5 1, end_time 1081360800
+end_time Wed Apr  7 11:00:00 2004
+
+ftype6 5, padding6 0 description Позвонить Валере Шутову и Вахтангу договориться о встрече
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757239
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1081638000
+start_time Sat Apr 10 16:00:00 2004
+
+ftype5 1, end_time 1081641600
+end_time Sat Apr 10 17:00:00 2004
+
+ftype6 5, padding6 0 description Поездка к Наташе
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757251
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1085364000
+start_time Sun May 23 19:00:00 2004
+
+ftype5 1, end_time 1085371200
+end_time Sun May 23 21:00:00 2004
+
+ftype6 5, padding6 0 description C110 on ebay
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 10
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757256
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1090242000
+start_time Mon Jul 19 06:00:00 2004
+
+ftype5 1, end_time 1090245600
+end_time Mon Jul 19 07:00:00 2004
+
+ftype6 5, padding6 0 description Dentistry
+1359 n205 str suite a
+shoreline, wa 98133
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757258
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1091383200
+start_time Sun Aug  1 11:00:00 2004
+
+ftype5 1, end_time 1091386800
+end_time Sun Aug  1 12:00:00 2004
+
+ftype6 5, padding6 0 description After august 3 apointment
+for dentistry
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757259
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1093626000
+start_time Fri Aug 27 10:00:00 2004
+
+ftype5 1, end_time 1093636800
+end_time Fri Aug 27 13:00:00 2004
+
+ftype6 5, padding6 0 description It's time change front brake pads
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757264
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1095087600
+start_time Mon Sep 13 08:00:00 2004
+
+ftype5 1, end_time 1095094800
+end_time Mon Sep 13 10:00:00 2004
+
+ftype6 5, padding6 0 description Дегтярь, Родион 13 sep 1976
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 13
+month_index 8
+------------------------------------------
+ftype1 1, record_id 1757262
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1097074800
+start_time Wed Oct  6 08:00:00 2004
+
+ftype5 1, end_time 1097082000
+end_time Wed Oct  6 10:00:00 2004
+
+ftype6 5, padding6 0 description Илья Сотов - 6-oct - 1976
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 0
+ftype13 1, alarm_advanced_units -1
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 6
+month_index 9
+------------------------------------------
+ftype1 1, record_id 1757266
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1099504800
+start_time Wed Nov  3 10:00:00 2004
+
+ftype5 1, end_time 1099508400
+end_time Wed Nov  3 11:00:00 2004
+
+ftype6 5, padding6 0 description Oleg Dedko has BZD today
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 1
+ftype14 1, alarm_advanced_type 1
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 3
+month_index 10
+------------------------------------------
+ftype1 1, record_id 1757265
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1098036000
+start_time Sun Oct 17 11:00:00 2004
+
+ftype5 1, end_time 1098037200
+end_time Sun Oct 17 11:20:00 2004
+
+ftype6 5, padding6 0 description Call ulad
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757268
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1104307200
+start_time Wed Dec 29 00:00:00 2004
+
+ftype5 1, end_time 1104307200
+end_time Wed Dec 29 00:00:00 2004
+
+ftype6 5, padding6 0 description 
+ftype 1, duration 0
+ftype8 5, padding8 0 note Ira stoicheva bzd
+29/dec/1977
+ftype9 6, unlimited 1
+ftype10 6, private 1
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32769
+brand 5, interval 1
+end_date 1956553199, first_day_of_week 0
+day_number 29
+month_index 11
+------------------------------------------
+ftype1 1, record_id 1757334
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1108404000
+start_time Mon Feb 14 10:00:00 2005
+
+ftype5 1, end_time 1108409400
+end_time Mon Feb 14 11:30:00 2005
+
+ftype6 5, padding6 0 description An appitment in CIS
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 5
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757337
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1116878400
+start_time Mon May 23 13:00:00 2005
+
+ftype5 1, end_time 1116882000
+end_time Mon May 23 14:00:00 2005
+
+ftype6 5, padding6 0 description Bill frizell in jazz alley
+starts 7:30
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 1
+ftype14 1, alarm_advanced_type 2
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757336
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1117137600
+start_time Thu May 26 13:00:00 2005
+
+ftype5 1, end_time 1117141200
+end_time Thu May 26 14:00:00 2005
+
+ftype6 5, padding6 0 description Bill frizell in jazz alley
+starts 7:30
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 1
+ftype14 1, alarm_advanced_type 2
+ftype15 8
+date_exeption 0
+repeat_event_flag 0
+------------------------------------------
+ftype1 1, record_id 1757338
+ftype2 1, status_field 0
+ftype3 1, position 2147483647
+ftype4 3, start_time 1116871200
+start_time Mon May 23 11:00:00 2005
+
+ftype5 1, end_time 1116874800
+end_time Mon May 23 12:00:00 2005
+
+ftype6 5, padding6 0 description Expect a message from senator
+about requvest to fbi
+ftype 1, duration 0
+ftype8 5, padding8 0 note 
+ftype9 6, unlimited 0
+ftype10 6, private 0
+ftype11 1, category 0
+ftype12 6, alarm_set 1
+ftype13 1, alarm_advanced_units 60
+ftype14 1, alarm_advanced_type 0
+ftype15 8
+date_exeption 0
+repeat_event_flag 32777
+brand 1, interval 1
+end_date 1117436400, first_day_of_week 0
+day_index 1

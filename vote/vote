@@ -1,0 +1,1556 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use CGI qw(:standard :html3);
+use DBI;
+use MIME::Base64;
+use Data::Dumper;
+use Access;
+use DBConfig;
+use Sys::Syslog qw(:DEFAULT setlogsock);
+use Digest::MD5  qw(md5 md5_hex md5_base64);
+use LWP;
+
+sub log_action($$$);
+sub show_log($);
+sub send_message($$$$$);
+
+sub print_header($$);
+sub login_person($);
+sub login_by_tag($$);
+sub print_login_dialog($;$);
+sub check_session($);
+
+sub print_current_vote_round($);
+sub print_edit_item_dialog($$);
+sub save_item($);
+sub save_vote_value($);
+
+sub edit_profile($);
+sub save_profile($);
+
+sub send_tag($);
+
+sub edit_vote($);
+sub save_vote($);
+
+sub download_item($);
+sub check_vote($);
+
+use constant ADMIN      => 1;
+
+sub reset_get_query();
+
+my $cgi = reset_get_query();
+
+my $cfg = {
+   action       => $cgi->param('a') || '',
+   id		=> 0,
+   cgi          => $cgi,
+   db_params    => DBConfig::get_db_params(),
+   session_expiration_time => 60*30, # 30 mins
+   songs_path	=> '/usr/local/www/data/ccpro.no-ip.org/band/votes',
+   sendmail     => '/usr/sbin/sendmail -oi -t',
+};
+
+$cfg->{access} = Access->new(
+   dsn    => $cfg->{db_params}->[0],
+   login  => $cfg->{db_params}->[1],
+   passwd => $cfg->{db_params}->[2],
+);
+
+unless ( $cfg->{access}{_dbh} ) {
+   print 
+        $cfg->{cgi}->header(
+                -type  => 'text/html; charset=utf-8'
+        ).
+	$cfg->{cgi}->start_html(
+		-title=>'Vite Server',
+		-style=>{'src'=>'/css/style.css'},
+		-head=>$cfg->{cgi}->meta({
+			-http_equiv=>'Content-Type',
+			-content=>'text/html',
+			-encoding=>'utf-8'
+		})
+	)."\n";
+        print $cfg->{cgi}->center(pre("$@::$!"))."\n".$cfg->{cgi}->end_html()."\n";
+        exit;
+};
+
+if ($ARGV[0] eq 'check_vote') {
+   check_vote($cfg);
+}
+
+if ($cfg->{action} eq 'login') {
+ my $error = login_person($cfg);
+ 
+   print_header($cfg, 1);
+   if ($error ne '') {
+      print_login_dialog($cfg, $error);
+      exit();
+   }
+
+   print_current_vote_round($cfg);
+}
+elsif ($cfg->{action} eq 'logout') {
+   check_session($cfg);
+   $cfg->{session} = '';
+   print_header($cfg, 1); 
+   print_login_dialog($cfg);
+   log_action($cfg, $cfg->{id}, 'logout');
+}
+else {
+ my $session_error = check_session($cfg) || '';
+
+   if ($cfg->{action} eq 'download') {
+      download_item($cfg);
+   }
+
+   if (($cfg->{session}||'') eq '') {
+    my $path_info = $ENV{PATH_INFO}||'';
+    my $login_tag = '';
+
+      if ( $path_info =~ /^\/(.*)$/ ) {
+         $login_tag = $1;
+      }
+
+      if ( substr($login_tag, 0, 1) eq '/' ) {
+         $login_tag = substr($login_tag, 1);
+      }
+
+      $session_error = login_by_tag($cfg, $login_tag);
+   }
+
+   print_header($cfg, 1);
+
+   if ($session_error ne '') {
+      print_login_dialog($cfg, $session_error);
+      exit();
+   }
+
+   if ($cfg->{action} eq 'add_item') {
+      print_edit_item_dialog($cfg, 0);
+   }
+   elsif ($cfg->{action} eq 'edit_item') {
+      print_edit_item_dialog($cfg, int $cfg->{cgi}->param('i'));
+   }
+   elsif ($cfg->{action} eq 'save_item') {
+      if (save_item($cfg)) {
+         print_current_vote_round($cfg);
+      }
+   }
+   elsif ($cfg->{action} eq 'save_vote_value') {
+      if (save_vote_value($cfg)) {
+         print_current_vote_round($cfg);
+      }
+   }
+   elsif ($cfg->{action} eq 'edit_profile') {
+      edit_profile($cfg);
+   }
+   elsif ($cfg->{action} eq 'save_profile') {
+      if (save_profile($cfg)) {
+         print_current_vote_round($cfg);
+      }
+   }
+   elsif ($cfg->{action} eq 'send_tag') {
+      send_tag($cfg);
+      print_current_vote_round($cfg);
+   }
+   elsif ($cfg->{action} eq 'edit_vote') {
+      edit_vote($cfg);
+   }
+   elsif ($cfg->{action} eq 'save_vote') {
+      if (save_vote($cfg)) {
+         print_current_vote_round($cfg);
+      }
+   }
+   elsif ($cfg->{action} eq 'show_log') {
+      show_log($cfg);
+   }
+   else {
+      print_current_vote_round($cfg);
+   }
+}
+
+print end_html()."\n";
+
+sub _decode_param($)
+{
+ my ($param) = @_;
+ my $shift;
+
+   length($param) || return '';
+
+   $shift = substr($param, 1, 1);
+   decode_base64(substr($param, 1+$shift));
+}
+
+sub reset_get_query()
+{
+ my $a = CGI::param('a') || '';
+ my $params;
+ my $new_query;
+
+   if ($a ne '' && substr($a, 0, 1) eq '-') {
+      $params = _decode_param($a);
+      $new_query = CGI->new("a=$params");
+   }
+   else {
+      $new_query = CGI->new();
+   }
+   
+   $new_query;
+}
+
+sub _encode_param($)
+{
+ my ($param) = @_;
+ my $add_str = '';
+ my $link;
+ my $length = 0;
+
+   while (1) {
+      $length = int(rand(7));
+      last if ($length > 3 || $length < 8);
+   }
+
+   length($param) || return '';
+
+   for (my $i=0; $i<$length; ++$i) {
+      $add_str .= int(rand(10));
+   }
+
+   if (length($param) < 32) {
+      $param .= '&_s_=';
+      while (length($param) < 32) {
+         $param .= rand(999);
+      }
+   }
+   
+   $link = '-'.(length($add_str)+1).$add_str.encode_base64($param);
+   $link =~ s/^(.*)\s$/$1/;
+
+   $link;
+}
+
+sub _get_cookie($)
+{
+ my ($cname) = shift || return '';
+ my ($name, $value);
+
+   for (split('; ', ($ENV{HTTP_COOKIE}||''))) {
+      ($name, $value) = split('=', ($_||''));
+
+      last if ( $name eq $cname );
+   }
+
+   return '' if ( ($name||'') ne $cname );
+
+   $value eq '-' ? '' : $value||'';
+}
+
+sub _read_session_cookie($)
+{
+ my ($cfg) = @_;
+
+   $cfg->{session} = _get_cookie('_s') || '';
+   $cfg->{session};
+}
+
+sub print_header($$)
+{
+ my ($cfg, $html_header) = @_;
+ my %header;
+
+   $cfg->{session} ||= '';
+   $cfg->{session} =~ s/\n|\r//g;
+
+   $header{-cookie} = 
+         CGI::cookie(
+               -name  => '_s',
+               -value => $cfg->{session},
+               -path  => '/');
+
+   if ($html_header) {
+      $header{-type} = 'text/html; charset=utf-8';
+   }
+   else {
+      $header{-type} = 'text/plain; charset=utf-8';
+   }
+
+   print $cfg->{cgi}->header(%header).
+         $cfg->{cgi}->start_html(
+		-title=>'Vote Server',
+		-style=>{
+		   'src'=>'/css/style.css'
+		},
+		-head=>$cfg->{cgi}->meta({
+			-http_equiv=>'Content-Type',
+			-content=> $html_header ? 'text/html' : 'text/plain',
+			-encoding=>'utf-8'
+		})
+	)."\n";
+}
+
+sub create_session($)
+{
+ my ($cfg) = @_;
+ my $id;
+ my $time = (scalar(time) + ($cfg->{id} == ADMIN ? 3600 : 0)).'';
+ my $session;
+
+   $id = sprintf("%04d", $cfg->{id});
+   $session = substr($time, 0, 2).substr($id, 0, 1).
+              substr($time, 2, 2).substr($id, 1, 1).
+              substr($time, 4, 2).substr($id, 2, 1).
+              substr($time, 6, 2).substr($id, 3, 1).
+              substr($time, 8, 2);
+   encode_base64($session);
+}
+
+sub login_by_tag($$)
+{
+ my ($cfg, $login_tag) = @_;
+ my $id;
+ my $sth;
+ my $sql = "SELECT person_id FROM vote_person WHERE login_tag = ";
+ my $ret = '';
+
+   return 'tag is empty' if (($login_tag||'') eq '');
+
+   $sql .= $cfg->{access}{_dbh}->quote($login_tag);
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   
+   if (my $s = $sth->fetch()) {
+      $cfg->{id} = int $s->[0];
+      $cfg->{session} = create_session($cfg);
+
+      log_action($cfg, $cfg->{id}, "log in by tag IP:$ENV{REMOTE_ADDR}");
+   }
+   else {
+      $ret = 'Wrong login tag';
+   }
+   $sth->finish();
+
+   $ret;
+}
+
+sub login_person($)
+{
+ my ($cfg) = @_;
+ my $login = $cfg->{cgi}->param('login') || '';
+ my $passwd = $cfg->{cgi}->param('password') || '';
+ my $dbh = $cfg->{access}{_dbh};
+ my $sth; 
+ my ($id, $db_passwd);
+ my $error = '';
+
+   $sth = $dbh->prepare("select person_id, password from vote_person where login = ".$dbh->quote($login));
+   $sth->execute();
+   if (my $s = $sth->fetch()) {
+      $id = int($s->[0]);
+      $db_passwd = $s->[1];
+   }
+   else {
+      $error = "Wrong login '$login'";
+   }
+   $sth->finish();
+   
+   if ($error ne '') {
+      return $error;
+   }
+   
+   if ($passwd ne $db_passwd) {
+      return 'Wrong Password';
+   }
+   
+   $cfg->{id} = $id;
+   $cfg->{session} = create_session($cfg);
+
+   log_action($cfg, $cfg->{id}, "log in by login dialog IP:$ENV{REMOTE_ADDR}");
+
+   '';
+}
+
+sub check_session($)
+{
+ my ($cfg) = @_;
+
+ my ($id, $time);
+ my $tmp;
+ my $ret = 0;
+ my $session;
+ 
+   $session = _read_session_cookie($cfg);
+
+   $session =~ s/%3D/=/;
+   $session =~ s/%0A//;
+   $tmp = decode_base64($session);
+
+   if ($tmp =~ /^(\d\d)(\d)(\d\d)(\d)(\d\d)(\d)(\d\d)(\d)(\d\d)$/) {
+      $time = int("$1$3$5$7$9");
+      $cfg->{id} = int("$2$4$6$8");
+
+      $cfg->{session} = '';
+      if ($time + $cfg->{session_expiration_time} >= time()) {
+         $ret = '';
+         $cfg->{session} = create_session($cfg);
+         $cfg->{session} =~ s/\n|\r//g;
+      }
+      else {
+         $ret = 'Session expired';
+      }
+   }
+   else {
+      $ret = '---';
+   }
+
+   $ret;
+}
+
+sub download_item($) 
+{
+ my ($cfg) = @_;
+ my $item_id = int $cfg->{cgi}->param('i') || 0;
+ my $file_name;
+ my $sql = "SELECT name, person_id FROM vote_item WHERE item_id = $item_id";
+ my $full_name;
+ my $person_id;
+ my $sth;
+ my $buffer;
+
+ my $header_format = "Content-Type: application/force-download\n".
+                     "Content-Disposition: attachment; filename=\"%s\"\n".
+                     "Content-Transfer-Encoding: binary\n".
+                     "Content-Length: %d\n".
+                     "Content-Description: Vote Server File Downloader v 0.1\n\n";
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   if (my $s = $sth->fetch()) {
+      $file_name = $s->[0] || '';
+      $person_id = int ($s->[1] || 0);
+      $sth->finish();
+   }
+   else {
+      $sth->finish();
+      return "No such vote item was found ($item_id)";
+   }
+
+   if ($file_name eq '') {
+      return "Empty vote item record was found ($item_id)";
+   }
+
+   $full_name = $cfg->{songs_path}."/$person_id/$file_name";
+
+   print sprintf $header_format, $file_name, -s $full_name;
+
+   open(FH, $full_name) or do {
+      return "Can not open file '$full_name'";
+   };
+   while (read(FH,$buffer,1024)) {
+      print $buffer;
+   }
+   close(FH);
+
+   log_action($cfg, $cfg->{id}, "downloaded $file_name");
+
+   '';
+}
+
+sub print_login_dialog($;$)
+{
+ my ($cfg, $msg) = @_;
+
+   print $cfg->{cgi}->center(
+            "Login first".br.($msg||'').br.
+            $cfg->{cgi}->start_form(-method=>'post', -name=>'login', -action=>$ENV{SCRIPT_NAME})."\n",
+            $cfg->{cgi}->hidden(-name=>'a', -value=>'login', -override => 1)."\n",
+            table({-border=>0, -width=>150},
+               Tr([
+                  td('Login:').td($cfg->{cgi}->textfield(-name=>'login', -size=>12, -maxlength=>12, -value=>''))."\n",
+                  td('Password:').td($cfg->{cgi}->password_field(-name=>'password', -size=>12, -maxlength=>16))."\n",
+                  td({-colspan=>2}, $cfg->{cgi}->submit('Login'))
+               ])
+            )."\n",
+            $cfg->{cgi}->end_form()
+         )."\n";
+}
+
+sub print_error($$)
+{
+ my ($cfg, $msg) = @_;
+
+   setlogsock('unix');
+   openlog($0,'','vote');
+   syslog('info', $msg);
+   closelog;
+
+   print $cfg->{cgi}->center(
+            br.br.
+            table({-border=>0, -width=>600},
+               Tr([
+                  th($msg)
+               ])
+            )."\n",
+         )."\n";
+}
+
+sub save_vote_value($)
+{
+ my ($cfg) = @_;
+ my $value;
+ my @sql;
+ my $sql;
+ my $person_id;
+ my $item_id;
+ my $ret = 0;
+ my $dbh = $cfg->{access}{_dbh};
+ my $voted = 0;
+
+   for my $vote_value ($cfg->{cgi}->param()) {
+   
+      if ($vote_value =~ /^vote_value_(\d*)_(\d*)$/ ) {
+         $value = $cfg->{cgi}->param($vote_value);
+         
+         next if ($value eq '-');
+         $value = int $value;
+         $voted++;
+         
+         $person_id = int $1;
+         $item_id = int $2;
+
+         if ($value > 0) {
+            push @sql, 
+              qq^DELETE FROM vote_item_value
+                 WHERE item_id = $item_id AND person_id = $person_id^;
+            push @sql, 
+              qq^INSERT INTO vote_item_value(item_id, person_id, value)
+                 VALUES($item_id, $person_id, $value)^;
+
+            log_action($cfg, $cfg->{id}, "voted with $value for $item_id");
+         }
+      }
+   }
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+      
+      eval {
+         for $sql (@sql) {
+            $dbh->do($sql);
+         }
+         $dbh->commit();
+         $ret = 1;
+      };
+      if ($@) {
+         print_error($cfg, "$@".br.$sql); 
+      }
+   }
+
+   $ret;
+}
+
+sub save_item($)
+{
+ my ($cfg) = @_;
+ my $vote_round    = $cfg->{cgi}->param('vote_round') || 0;
+ my $item_id       = $cfg->{cgi}->param('item_id') || 0;
+ my $name          = $cfg->{cgi}->param('name') || '';
+ my $file_path     = $cfg->{cgi}->param('file_path') || '';
+ my $comment       = $cfg->{cgi}->param('comment') || '';
+ my $text          = $cfg->{cgi}->param('text') || '';
+ my $file          = $cfg->{cgi}->param('file');
+ my $uploaded_file = $cfg->{cgi}->param('uploaded_file') || '';
+ my $file_name;
+ my $buffer;
+ my $dbh = $cfg->{access}{_dbh};
+ my $sql;
+ my $insert = 0;
+
+   if (int $vote_round == 0) {
+      print_error($cfg, "You Haven't choosen Vote Round");
+      return 0;
+   }
+   if ($name eq '') {
+      print_error($cfg, "You Haven't choosen Song Name");
+      return 0;
+   }
+
+   if (!$file && $uploaded_file eq '' && $file_path eq '') {
+      print_error($cfg, "Please upload File or external http link");
+      return 0;
+   }
+   
+   if ($file) {
+      $file_name = "$cfg->{songs_path}/$cfg->{id}";
+      unless (-d $file_name) {
+         eval {
+            mkdir($file_name);
+         };
+         if ($@) {
+            print_error($cfg, "$@".br."'$file_name'");
+            return 0;
+         }
+      }
+      
+      $file_name .= "/$file";
+      open FH, ">$file_name" or do {print_error($cfg, "can not save $file_name"); return 0;};
+      while (read($file,$buffer,1024)) {
+         print FH $buffer;
+      }
+      close(FH);
+   }
+   
+   $file_name = $dbh->quote($file);
+   $file_path = $dbh->quote($file_path);
+   $comment = $dbh->quote($comment);
+   $text = $dbh->quote($text);
+
+   if ($item_id > 0) {
+    my $name;
+
+      $name = "name = ".($uploaded_file ne '' ? $dbh->quote($uploaded_file) : $file_name);
+      $sql = qq^UPDATE vote_item 
+               SET $name, file_path = $file_path, comment = $comment, text = $text
+               WHERE item_id = $item_id^;
+      log_action($cfg, $cfg->{id}, "updated item $item_id ".($file_name||$file_path));
+   }
+   else {
+      $sql = qq^INSERT INTO vote_item(vote_round_id, person_id, name, file_path, comment, text)
+                VALUES($vote_round, $cfg->{id}, $file_name, $file_path, $comment, $text)^;
+      log_action($cfg, $cfg->{id}, "added item ".($file_name||$file_path));
+      $insert = 1;
+   }
+   
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+      
+      eval {
+         $dbh->do($sql);
+         $dbh->commit();
+      };
+      if ($@) {
+         print_error($cfg, "$@".br.$sql); 
+         return 0;
+      }
+   }
+   
+   if ($insert) {
+      send_message($cfg, 0, $vote_round, 'New Item was added', "New Item ($file_name) was added to vote");
+   }
+   
+   1;
+}
+
+sub _vote_round_popup($$)
+{
+ my ($cfg, $round_id) = @_;
+ my $sql = qq^SELECT vr.vote_round_id, vr.name 
+              FROM vote_round vr 
+              JOIN vote_person_group vpg ON 
+                  vpg.group_id = vr.group_id AND vpg.person_id = $cfg->{id}
+              WHERE done IS NULL^;
+ my $sth;
+ my %votes;
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $votes{int $s->[0]} = $s->[1];
+      if ($round_id == 0) {
+         $round_id = int $s->[0];
+      }
+   }
+   $sth->finish();
+
+   $cfg->{cgi}->popup_menu(-name    => 'vote_round',
+                           -values  => [sort keys %votes],
+                           -default => $round_id,
+                           -size    => 1,
+                           -labels  => \%votes);
+}
+
+sub print_edit_item_dialog($$)
+{
+  my ($cfg, $item_id) = @_;
+  my $data;
+  my $sql;
+  my $sth;
+  my $vote_round_id = $cfg->{cgi}->param('rid') || 0;
+
+   if ($item_id > 0) {
+      $sql = qq^SELECT vote_round_id, person_id, name, file_path, comment, text
+                FROM vote_item
+                WHERE item_id = $item_id^;
+   
+      $sth = $cfg->{access}{_dbh}->prepare($sql);
+      $sth->execute();
+      unless ($data = $sth->fetchrow_hashref()) {
+         $sth->finish();
+         print_error($cfg, "Can not find item '$item_id'");
+         exit();
+      }
+      $sth->finish();
+      $vote_round_id = $data->{vote_round_id};
+   }
+
+   print $cfg->{cgi}->center(
+      
+      $cfg->{cgi}->start_multipart_form(-method=>'post', -name=>'save_item', -action=>$ENV{SCRIPT_NAME})."\n",
+      $cfg->{cgi}->hidden(-name=>'a', -value=>'save_item', -override => 1)."\n",
+      $cfg->{cgi}->hidden(-name=>'item_id', -value=>$item_id, -override => 1)."\n",
+      table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>700},
+         Tr([
+            th('Item Id').td($item_id || 'New')."\n",
+            th('Vote Round').td(_vote_round_popup($cfg, $vote_round_id || $data->{vote_round_id} || 0))."\n",
+            th('Name').td($cfg->{cgi}->textfield(-name=>'name', -size=>80, -maxlength=>128, -value=>$data->{name}||'', -override => 1))."\n",
+            th('Link').td($cfg->{cgi}->textfield(-name=>'file_path', -size=>80, -maxleng=>256, -value=>$data->{file_path}||'', -override => 1))."\n",
+            th('Comment').td($cfg->{cgi}->textfield(-name=>'comment', -size=>80, -maxleng=>256, -value=>$data->{comment}||'', -override => 1))."\n",
+            th('Customer List File').
+            td(
+               filefield(-name=>'file',
+                         -default=>'',
+                         -size=>60,
+                         -maxlength=>128).
+               $cfg->{cgi}->hidden(-name=>'uploaded_file', -value=>$data->{name}||'', -override => 1)."\n"
+            )."\n",
+            th({-valign=>'top'},b 'Text').
+            td(
+               textarea(
+                  -name => 'text',
+                  -id => 'text',
+                  -default => $data->{text}||'',
+                  -rows => 30,
+                  -cols => 80,
+                  -override => 1
+               )
+            )."\n",
+            
+            td({-colspan=>2, -align=>'center'}, $cfg->{cgi}->submit('Add').('&nbsp;'x4).reset)
+            
+         ])
+      )
+   )."\n";
+   
+   $vote_round_id;
+}
+
+sub vote_value_popup($$$$)
+{
+ my ($cfg, $person_id, $item_id, $value) = @_;
+
+   $cfg->{cgi}->popup_menu(
+                 -name    => "vote_value_".$person_id.'_'.$item_id,
+                 -values  => ['-', 1, 2, 3, 4, 5],
+                 -default => $value || '-',
+                 -size    => 1,
+                 -onChange=>'javascript:vote_value_form.submit();');
+}
+
+sub vote_round_popup($$$$)
+{
+ my ($cfg, $vote_rounds, $vote_round_id, $form_name) = @_;
+ my %votes = ();
+
+   for my $round_id (keys %$vote_rounds) {
+      $votes{int $round_id} = "$vote_rounds->{$round_id}{name} :: $vote_rounds->{$round_id}{date} :: items $vote_rounds->{$round_id}{items}";
+   }
+
+   $cfg->{cgi}->popup_menu(
+                 -name    => 'rid',
+                 -id      => 'rid',
+                 -values  => [sort keys %votes],
+                 -default => $vote_round_id || 1,
+                 -labels  => \%votes,
+                 -size    => 1,
+                 -onChange=>"javascript:$form_name.submit();");
+#                 -onChange=>"javascript: url = 'http://$ENV{SERVER_NAME}$ENV{SCRIPT_NAME}?rid='+vote_round_id.options[vote_round_id.selectedIndex].value; window.location = url;");
+}
+
+sub print_current_vote_round($)
+{
+ my ($cfg) = @_;
+ my $sth;
+ my $sql;
+ my $c = $cfg->{cgi};
+ my $colspan;
+ my $colspan_full;
+ my %data;
+ my @items;
+ my $add_song_link;
+ my %values;
+ my %users;
+ my %persons;
+ my $last_round_id = 0;
+ my $last_person_id = 0;
+ my $total;
+ my $download_link;
+ my $http_link;
+ my %vote_rounds;
+ my $choosen_round = $cfg->{cgi}->param('rid') || $cfg->{cgi}->param('vote_round') || 0;
+ my $vote_form_name = 'vote_value_form';
+ my $vote_done_flag;
+ my $encoded_param;
+ my $show_log_link;
+ my $edit_item_link;
+
+   # list of vote round where person in 
+   $sql = qq^SELECT vr.vote_round_id, date(vr.date), vr.name, Count(vi.item_id) AS item_count 
+             FROM vote_round vr 
+             JOIN vote_person_group vpg ON vpg.group_id = vr.group_id AND vpg.person_id = $cfg->{id}
+             LEFT JOIN vote_item vi ON vi.vote_round_id = vr.vote_round_id 
+             GROUP BY vr.vote_round_id, vr.date, vr.name 
+             ORDER BY item_count DESC^;
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $vote_rounds{int $s->[0]} = {date => $s->[1], name => $s->[2], items => int $s->[3]};
+   } 
+   $sth->finish();
+
+   if ($choosen_round == 0) {
+    my $max_items = -1;
+      for my $key (keys %vote_rounds) {
+         if ($vote_rounds{$key}{items} > $max_items) {
+            $choosen_round = $key;
+            $max_items = $vote_rounds{$key}{items};
+         }
+      }
+   }
+
+   #list of item per choosen vote round
+   $sql = qq^
+      SELECT vr.vote_round_id, date(vr.date), vr.done > current_date, vr.name,
+             vi.item_id, vi.name as item_name, vi.person_id, vi.file_path, vi.comment, vr.limit,
+             (SELECT Count(vi1.item_id)
+              FROM vote_item vi1
+              WHERE vi1.person_id = vi.person_id
+                AND vi1.vote_round_id = vr.vote_round_id) AS count,
+             (SELECT Count(vi2.item_id)
+              FROM vote_item vi2
+              WHERE vi2.vote_round_id = vr.vote_round_id) as item_count,
+             (SELECT Sum(viv.value)
+              FROM vote_item_value viv
+              WHERE viv.item_id = vi.item_id) as item_value
+      FROM vote_round vr
+      JOIN vote_person_group vpg ON vpg.group_id = vr.group_id AND vpg.person_id = $cfg->{id}
+      LEFT JOIN vote_item vi ON vi.vote_round_id = vr.vote_round_id
+      JOIN vote_group vg ON vg.group_id = vr.group_id
+      WHERE vr.vote_round_id = $choosen_round
+      ORDER BY vi.person_id, item_value DESC^;
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $vote_done_flag = defined $s->[2] && $s->[2] == 0 ? 1 : 0;
+      push @items, int ($s->[4]||0);
+      $data{int $s->[0]}{int ($s->[4]||0)} = 
+         {vote_date => $s->[1], closed    => $vote_done_flag, vote_name => $s->[3], 
+          item_name => $s->[5], person_id => $s->[6],         file_path => $s->[7], 
+          comment   => $s->[8], limit     => int $s->[9],     count => int $s->[10],
+          total_count => int $s->[11]};
+   }
+   $sth->finish();
+
+   $add_song_link = $c->a({-href=>'?a='._encode_param("add_item&rid=$choosen_round")}, '[Add Song]');
+
+   $sql = qq^SELECT viv.item_id, viv.person_id, viv.value
+              FROM vote_item_value viv 
+              WHERE viv.item_id IN (^.join(',', @items).')';
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $values{int $s->[0]}{int $s->[1]} = {value => int $s->[2], comment => $s->[3]};
+   }
+   $sth->finish();
+   
+   $sql = qq^SELECT vp.person_id, vp.name 
+             FROM vote_person vp 
+             JOIN vote_person_group vpg ON vpg.person_id = vp.person_id 
+             JOIN vote_round vr ON vr.vote_round_id = $choosen_round AND vr.group_id = vpg.group_id^;
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $users{int $s->[0]} = $s->[1];
+   }
+   $sth->finish();
+
+   %persons = %users;
+
+   $colspan = sprintf("colspan=%d", scalar(keys %users)+3);
+   $colspan_full = sprintf("colspan=%d", scalar(keys %users)+4);
+   
+   if ($cfg->{id} == ADMIN) {
+      $show_log_link = a({-href=>'?a='._encode_param('show_log'), 
+                          -title=>'Show Log'}, 
+                        '[Show Log]').('&nbsp;'x2).
+                       a({-href=>'?a='._encode_param('edit_vote'), 
+                          -title=>'Add Vote Round'}, 
+                        '[Add Vote]').('&nbsp;'x2);
+   }
+   
+   $encoded_param = _encode_param('logout');
+   print 
+         $cfg->{cgi}->start_form(-method=>'post', -name=>$vote_form_name, -action=>$ENV{SCRIPT_NAME})."\n",
+         $cfg->{cgi}->hidden(-name=>'a', -value=>'save_vote_value', -override => 1)."\n",
+         qq^<center>
+            $show_log_link
+            <a href='?a=$encoded_param' title='Logout'>[Logout]</a>
+            <table border=1 cellspacing=1 cellpadding=3 width='90%'>
+               <tr>
+                  <th rowspan=2>Id</th>
+                  <th rowspan=2>Song</th>
+                  <th rowspan=2></th>
+                  <th $colspan>Voters</th>
+               </tr>
+               <tr>\n^;
+   for my $id (sort {$a cmp $b} keys %users) {
+      if ($cfg->{id} == ADMIN) {
+         print th(
+            $users{$id}.br.
+            a({-href=>'?a='._encode_param("send_tag&id=$id"), -title=>"Send Invitation to $users{$id}"}, '[I]').'&nbsp;'.
+            a({-href=>'?a='._encode_param("edit_profile&id=$id"), -title=>"Edit $users{$id} profile"}, '[E]').'&nbsp;'
+         );
+      }
+      else {
+         if ($cfg->{id} == $id) {
+            print th(a({-href=>'?a='._encode_param('edit_profile'), -title=>"Edit $users{$id} profile"}, $users{$id}));
+         }
+         else {
+            print th($users{$id});
+         }
+      }
+   }
+   print th('Total');
+   print "</tr>\n";
+
+   for my $round_id (sort {$a cmp $b} keys %data) {
+      for my $item_id (@items) {
+         if ($last_round_id != $round_id) {
+          my $edit_link = '';
+          my $close_link = '';
+            $last_round_id = $round_id;
+            
+            if ($cfg->{id} == ADMIN) {
+               $edit_link = ('&nbsp;' x 5).
+                            a({-href  => '?a='._encode_param("edit_vote&i=$round_id"),
+                               -title => "Edit Round $data{$round_id}{$item_id}{vote_name} ($data{$round_id}{$item_id}{vote_date}:$data{$round_id}{$item_id}{limit})"},
+                               '[E]');
+               unless ($data{$round_id}{$item_id}{closed}) {
+                  $edit_link .= ('&nbsp;').
+                                 a({-href  => '?a='._encode_param("close_vote&i=$round_id"),
+                                    -title => "Close Round $data{$round_id}{$item_id}{vote_name} ($data{$round_id}{$item_id}{vote_date}:$data{$round_id}{$item_id}{limit})"},
+                                   '[C]');
+               }
+            }
+            print '<tr>'.
+                    th({-colspan => 3},
+                       'Votes:'.vote_round_popup($cfg, \%vote_rounds, $choosen_round, $vote_form_name)
+                    ).
+                    "<th nowrap $colspan>Vote Date : $data{$round_id}{$item_id}{vote_date} Vote Name : $data{$round_id}{$item_id}{vote_name}. Limit : $data{$round_id}{$item_id}{limit}$edit_link&nbsp;$close_link</th></tr>\n";
+         }
+
+         last if ($data{$round_id}{$item_id}{total_count} == 0);
+
+         if ( exists $persons{$data{$round_id}{$item_id}{person_id}} ) {
+            delete $persons{$data{$round_id}{$item_id}{person_id}};
+         }
+         
+         if ($last_person_id != $data{$round_id}{$item_id}{person_id}) {
+            $last_person_id = $data{$round_id}{$item_id}{person_id};
+
+            if ((($data{$round_id}{$item_id}{person_id} == $cfg->{id} &&
+                  $data{$round_id}{$item_id}{count} < $data{$round_id}{$item_id}{limit}) ||
+                 $cfg->{id} == ADMIN) &&
+                !$vote_done_flag) {
+               print "<tr><th nowrap align='left' $colspan>$users{$last_person_id}'s songs</th><th>$add_song_link</th></tr>\n";
+            }
+            else {
+               print "<tr><th nowrap align='left' $colspan_full>$users{$last_person_id}'s songs</th></tr>\n";
+            }
+         }
+
+         if (($data{$round_id}{$item_id}{item_name}||'') ne '') {
+            $download_link = a({
+               -href  => '?a='._encode_param("download&i=$item_id"), 
+               -title => "Download $data{$round_id}{$item_id}{item_name}"}, 
+               '[D]');
+         }
+         else {
+            $download_link = '';
+         }
+         
+         if (($data{$round_id}{$item_id}{file_path}||'') ne '') {
+            $http_link = a({
+                -href   => $data{$round_id}{$item_id}{file_path},
+                -target => time,
+                -title  => 'Watch HTTP link'},
+                '[L]');
+         }
+         else {
+            $http_link = '';
+         }
+
+         if ($cfg->{id} == ADMIN ||
+             $data{$round_id}{$item_id}{person_id} == $cfg->{id}) {
+            $edit_item_link = a(
+                    {-href=>'?a='._encode_param("edit_item&i=$item_id"), 
+                     -title=>"Edit '$data{$round_id}{$item_id}{item_name}' info"}, 
+                     '[E]').'&nbsp;';
+         }
+         else {
+            $edit_item_link = '';
+         }
+
+         print "<tr><th>$item_id</th>".
+               td($data{$round_id}{$item_id}{item_name}).
+               th({-align=>'left'}, $edit_item_link.$download_link.$http_link);
+
+         $total = 0;
+         for my $person_id (sort {$a cmp $b} keys %users) {
+            $person_id = int $person_id;
+            $values{$item_id}{$person_id}{value} ||= 0;
+
+            if ($data{$round_id}{$item_id}{person_id} == $person_id) {
+               print "<td align='right'>X</td>";
+            } 
+            elsif (($person_id == $cfg->{id} || $cfg->{id} == ADMIN) && !$vote_done_flag) {
+               print th(vote_value_popup($cfg, $person_id, $item_id, int $values{$item_id}{$person_id}{value}));
+               $total += int ($values{$item_id}{$person_id}{value}||0);
+            }
+            else {
+               print "<td align='right'>$values{$item_id}{$person_id}{value}</td>";
+               $total += int $values{$item_id}{$person_id}{value};
+            }
+         }
+         print "<th>$total</th></tr>\n";
+      }
+   }
+
+   for my $person_id (keys %persons) {
+      $add_song_link = $c->a({-href=>'?a='._encode_param("add_item&rid=$choosen_round")}, '[Add Song]');
+      if (($person_id == $cfg->{id} || $cfg->{id} == ADMIN) && !$vote_done_flag) {
+         print "<tr><th nowrap align='left' $colspan>$persons{$person_id}'s songs</th><th>$add_song_link</th></tr>\n";
+      }
+      else {
+         print "<tr><th nowrap align='left' $colspan_full>$persons{$person_id}'s songs</th></tr>\n";
+      }
+   }
+
+   print "</table>\n",
+         $cfg->{cgi}->end_form()."\n";
+
+}
+
+sub edit_profile($)
+{
+ my ($cfg) = @_;
+ my $person_id = $cfg->{cgi}->param('id') || $cfg->{id} || -1;
+ my $sql = "SELECT name, created, login, password, email, login_tag, send_email FROM vote_person WHERE person_id = $person_id";
+ my $data = {};
+ my %groups;
+ my $sth;
+ my $groups;
+ my @person_groups;
+
+   if ($person_id != 0) {
+      $sth = $cfg->{access}{_dbh}->prepare($sql);
+      $sth->execute();
+      unless ($data = $sth->fetchrow_hashref()) {
+         $sth->finish();
+         print_error($cfg, "Account '$person_id' wasn't found");
+         exit();
+      }
+      $sth->finish();
+   }
+
+   $sql = qq^SELECT vg.group_id, vg.name||'('||vg.description||')', vpg.group_id 
+             FROM vote_group vg 
+             LEFT JOIN vote_person_group vpg 
+             ON vpg.group_id = vg.group_id AND vpg.person_id = $person_id
+             ORDER BY vg.group_id^;
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $groups{int $s->[0]} = $s->[1];
+      push @person_groups, int $s->[2] if (int $s->[2] > 0);
+   }
+   $sth->finish();
+
+   if ($cfg->{id} == ADMIN) {
+      $groups = $cfg->{cgi}->checkbox_group(
+                         -name    => 'groups',
+                         -values  => [keys %groups],
+                         -labels  => \%groups,
+                         -columns => 2,
+                         -defaults => [@person_groups]);
+   }
+   else {
+      $groups = '';
+      for (@person_groups) {
+         $groups .= br.$groups{$_};
+         $groups .= $cfg->{cgi}->hidden(-name=>'groups', -value=>$_, -override => 1);
+      }
+   }
+
+   print br.br.
+         $cfg->{cgi}->center(
+            ($person_id == 0 ? "New Account" : "$data->{name} Account").br.
+            $cfg->{cgi}->start_form(-method=>'post', -name=>'edit_profile', -action=>$ENV{SCRIPT_NAME})."\n",
+            $cfg->{cgi}->hidden(-name=>'a', -value=>'save_profile', -override => 1)."\n",
+            $cfg->{cgi}->hidden(-name=>'id', -value=>$person_id, -override => 1)."\n",
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>'90%'},
+               Tr([
+                  th('Name').td($cfg->{cgi}->textfield(-name=>'name', -size=>64, -maxlength=>64, -value=>$data->{name}||''))."\n",
+                  th('Groups').td($groups)."\n",
+                  th('Login').td(
+                     ($person_id == ADMIN || $person_id == 0 ?
+                        $cfg->{cgi}->textfield(-name=>'login', -size=>16, -maxlength=>16, -value=>$data->{login}||'')
+                        :
+                        $cfg->{cgi}->hidden(-name=>'login', -value=>-value=>$data->{login}, -override => 1).
+                        $data->{login}
+                     ))."\n",
+                  th('Password').td($cfg->{cgi}->textfield(-name=>'passwd', -size=>32, -maxlength=>32, -value=>$data->{password}||''))."\n",
+                  th('EMail').td($cfg->{cgi}->textfield(-name=>'email', -size=>80, -maxlength=>128, -value=>$data->{email}||''))."\n",
+                  th('Login Tag').td($cfg->{cgi}->textfield(-name=>'tag', -size=>16, -maxlength=>16, -value=>$data->{login_tag}||''))."\n",
+                  th('Receive EMails').td(
+                     "<input type='checkbox' name='send_email' value='1' ".(int($data->{send_email}||0) ? 'checked' : '').'>'
+                  )."\n",
+                  th({-colspan=>2}, $cfg->{cgi}->submit('[Save]'))
+               ])
+            )."\n",
+            $cfg->{cgi}->end_form()
+         )."\n";
+
+
+}
+
+sub save_profile($)
+{
+ my ($cfg) = @_;
+ my $person_id = $cfg->{cgi}->param('id') || 0;
+ my $name      = $cfg->{cgi}->param('name') || '';
+ my @groups;
+ my $login     = $cfg->{cgi}->param('login') || '';
+ my $passwd    = $cfg->{cgi}->param('passwd') || '';
+ my $email     = $cfg->{cgi}->param('email') || '';
+ my $tag       = $cfg->{cgi}->param('tag') || substr(md5_hex($login), 0, 16);
+ my $dbh = $cfg->{access}{_dbh};
+ my $send_email = $cfg->{cgi}->param('send_email') || 0;
+ my $sql;
+ my @sql;
+
+   if ($name eq '') {
+      print_error($cfg, "Name can not be empty");
+      return 0;
+   }
+
+   if ($passwd eq '') {
+      print_error($cfg, "Password can not be empty");
+      return 0;
+   }
+
+   if ($login eq '') {
+      print_error($cfg, "Login can not be empty");
+      return 0;
+   }
+
+   if ($email eq '') {
+      print_error($cfg, "EMail can not be empty");
+      return 0;
+   }
+
+   for (param('groups')) {
+      push @groups, int $_;
+   }
+
+   if (scalar @groups == 0) {
+      print_error($cfg, "Please choose group");
+      return 0;
+   }
+
+   $name   = $dbh->quote($name);
+   $login  = $dbh->quote($login);
+   $passwd = $dbh->quote($passwd);
+   $email  = $dbh->quote($email);
+   $tag    = $dbh->quote($tag);
+
+   if ($person_id > 0) {
+      $sql = qq^UPDATE vote_person 
+                SET name = $name, login = $login, password = $passwd, email = $email, login_tag = $tag,
+                    send_email = $send_email
+                WHERE person_id = $person_id^;
+   }
+   else {
+      $sql = qq^INSERT INTO vote_person (name, login, password, email, login_tag, send_email)
+                VALUES($name, $login, $passwd, $email, $tag, $send_email)^;
+   }
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+      
+      eval {
+         $dbh->do($sql);
+         $dbh->commit();
+      };
+      if ($@) {
+         print_error($cfg, "$@".br.$sql); 
+         return 0;
+      }
+      else {
+            log_action($cfg, $cfg->{id}, "saved $name/$login/@groups profile");
+      }
+   }
+
+   push @sql, "DELETE FROM vote_person_group WHERE person_id = $person_id";
+   for (@groups) {
+      push @sql, "INSERT INTO vote_person_group select person_id, $_ FROM vote_person WHERE login =".$login;
+   }   
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+      
+      eval {
+         for $sql (@sql) {
+            $dbh->do($sql);
+         }
+         $dbh->commit();
+      };
+      if ($@) {
+         print_error($cfg, "$@".br.$sql); 
+         return 0;
+      }
+   }
+
+   1;
+}
+
+sub send_tag($)
+{
+ my ($cfg) = @_;
+ my $person_id = $cfg->{cgi}->param('id') || 0;
+ my $sql;
+ my $sth;
+ my $text;
+ my $data;
+
+   $sql = "SELECT name, email, login_tag FROM vote_person WHERE person_id = $person_id";
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   unless ($data = $sth->fetchrow_hashref()) {
+      $sth->finish();
+      print_error($cfg, "Account $person_id wasn't found");
+      return 0;
+   }
+   $sth->finish();
+   
+   $text = qq^Dear $data->{name} your link to login to Vote Server is 'http://$ENV{SERVER_NAME}$ENV{SCRIPT_NAME}/$data->{login_tag}
+
+              Thanks,
+              Vote Server^;
+   send_email($cfg, $data->{email}, "Login Link", $text);
+   log_action($cfg, $cfg->{id}, "sent login tag to $person_id");
+}
+
+sub send_email($$$$)
+{
+ my ($cfg, $email, $subject, $text) = @_;
+ my $body;
+ my $uid = time().$$;
+ my $browser = LWP::UserAgent->new();
+ my $url = 'http://prozhogin.org/cgi-bin/pm';
+ my $response;
+
+   $body = qq^to: $email
+bcc: sprozhogin\@gmail.com
+from: vote_server\@ccpro.no-ip.org
+Subject: $subject
+UId: $uid
+
+$text^;
+
+   $response = $browser->post( $url, [ 'mail' => $body ]);
+   return $response->{_content} eq 'Ok';
+}
+
+sub edit_vote($)
+{
+ my ($cfg) = @_;
+ my $vote_id = $cfg->{cgi}->param('i') || 0;
+ my $sql = 'SELECT group_id, date(date), name, done, "limit" FROM vote_round WHERE vote_round_id = '.$vote_id;
+ my $data = {};
+ my $sth;
+ my %groups;
+
+   if ($vote_id > 0) {
+      $sth = $cfg->{access}{_dbh}->prepare($sql);
+      $sth->execute();
+      unless ($data = $sth->fetchrow_hashref()) {
+         $sth->finish();
+         print_error($cfg, "Can not find vote round ($vote_id)");
+         return;
+      }
+      $sth->finish();
+   }
+   
+   $sql = "SELECT group_id, name||'('||description||')' FROM vote_group ORDER BY group_id";
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      $groups{int $s->[0]} = $s->[1];
+   }
+   $sth->finish();
+
+   print br.br.
+         $cfg->{cgi}->center(
+            ($vote_id == 0 ? "New Vote" : "$data->{name} Vote").br.
+            $cfg->{cgi}->start_form(-method=>'post', -name=>'edit_vote', -action=>$ENV{SCRIPT_NAME})."\n",
+            $cfg->{cgi}->hidden(-name=>'a', -value=>'save_vote', -override => 1)."\n",
+            $cfg->{cgi}->hidden(-name=>'id', -value=>$vote_id, -override => 1)."\n",
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>'90%'},
+               Tr([
+                  th('Name').td($cfg->{cgi}->textfield(-name=>'name', -size=>128, -maxlength=>128, -value=>$data->{name}||''))."\n",
+                  th('Date').td($cfg->{cgi}->textfield(-name=>'date', -size=>10, -maxlength=>10, -value=>$data->{date}||''))."\n",
+                  th('Done').td($cfg->{cgi}->textfield(-name=>'done', -size=>10, -maxlength=>10, -value=>$data->{done}||''))."\n",
+                  th('Limit').td($cfg->{cgi}->textfield(-name=>'limit', -size=>1, -maxlength=>1, -value=>$data->{limit}||''))."\n",
+                  th('Groups').td(
+                                   $cfg->{cgi}->popup_menu(
+                                      -name    => 'group',
+                                      -values  => [sort keys %groups],
+                                      -default => $data->{groups_id} || 1,
+                                      -size    => 1,
+                                      -labels  => \%groups)
+                  )."\n",
+                  th({-colspan=>2}, $cfg->{cgi}->submit('[Save]'))
+               ])
+            )."\n",
+            $cfg->{cgi}->end_form()
+         )."\n";
+
+}
+
+sub save_vote($)
+{
+ my ($cfg) = @_;
+ my $vote_id = $cfg->{cgi}->param('id') || 0;
+ my $name    = $cfg->{cgi}->param('name') || '';
+ my $date    = $cfg->{cgi}->param('date') || '';
+ my $done    = $cfg->{cgi}->param('done') || '';
+ my $limit   = $cfg->{cgi}->param('limit') || 0;
+ my $group   = $cfg->{cgi}->param('group') || 0;
+ my $sql;
+ my $dbh = $cfg->{access}{_dbh};
+
+   if ($name eq '' ) {
+      print_error($cfg, "Name is empty");
+      return 0;
+   }
+
+   if ($date eq '' ) {
+      print_error($cfg, "Date is empty");
+      return 0;
+   }
+
+   if ($limit == 0) {
+      print_error($cfg, "Limit is zero");
+      return 0;
+   }
+
+   $name = $dbh->quote($name);
+   $date = $dbh->quote($date);
+   
+   if ($done ne '') {
+      $done = ", done = ".$dbh->quote($done);
+   }
+   
+   if ($vote_id > 0) {
+      $sql = qq^UPDATE vote_round 
+                SET name = $name, date = $date $done, "limit" = $limit, group_id = $group
+                WHERE vote_round_id = $vote_id^;
+      log_action($cfg, $cfg->{id}, "updated vote $vote_id");
+   }
+   else {
+      $sql = qq^INSERT INTO vote_round (name, date, "limit", group_id)
+                VALUES($name, $date, $limit, $group)^;
+      log_action($cfg, $cfg->{id}, "inserted vote $vote_id");
+   }
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+
+      eval {
+         $dbh->do($sql);
+         $dbh->commit();
+      };
+      if ($@) {
+         print_error($cfg, "$@".br.$sql); 
+         return 0;
+      }
+   }
+
+   1;
+}
+
+sub log_action($$$)
+{
+ my ($cfg, $person_id, $action) = @_;
+ my $dbh = $cfg->{access}{_dbh};
+ my $sql;
+
+   $action = $dbh->quote($action);
+   $sql = "INSERT INTO vote_log (person_id, action) VALUES($person_id, $action)";
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+
+      eval {
+         $dbh->do($sql);
+         $dbh->commit();
+      };
+      if ($@) {
+         warn "$@".br.$sql; 
+      }
+   }
+}
+
+sub send_message($$$$$)
+{
+ my ($cfg, $item_id, $vote_round_id, $subject, $message) = @_;
+ my $browser = LWP::UserAgent->new();
+ my $url = 'http://prozhogin.org/cgi-bin/pm';
+ my $body;
+ my $response;
+ my @to;
+ my $sth;
+ my $sql;
+ my $uniq = time + int($item_id||0) + int($vote_round_id||0);
+ 
+   if (int ($item_id||0) > 0) {
+      $sql = qq^SELECT vp.name, vp.email 
+                FROM vote_person vp 
+                JOIN vote_person_group vpg ON vpg.person_id = vp.person_id 
+                JOIN vote_round vr ON vpg.group_id = vr.group_id 
+                JOIN vote_item vi ON vi.vote_round_id = vr.vote_round_id AND vi.item_id = $item_id
+                WHERE vp.send_email = 1^;
+   }
+   elsif (int ($vote_round_id||0) > 0) {
+      $sql = qq^SELECT vp.name, vp.email 
+                FROM vote_person vp 
+                JOIN vote_person_group vpg ON vpg.person_id = vp.person_id 
+                JOIN vote_round vr ON vpg.group_id = vr.group_id AND vr.vote_round_id = $vote_round_id
+                WHERE vp.send_email = 1^;
+   }
+   else {
+      log_action($cfg, ADMIN, substr($body, 0, 256));
+      return;
+   }
+ 
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   while (my $s = $sth->fetch()) {
+      push @to, $s->[1];
+   }
+   $sth->finish();
+
+#   $body .= "\n".join('::', @to);
+#   @to = ('sergey@prozhogin.org', 'spro@ccpro.no-ip.org');
+
+   $body = 
+"to: ".join(',', @to).qq^
+from: vote-server\@ccpro.no-ip.org
+bcc: sprozhogin\@gmail.com
+subject: $subject
+UID: $uniq
+$message
+
+vote-server^;
+
+   $response = $browser->post( $url, [ 'mail' => $body ]);
+}
+
+sub show_log($)
+{
+ my ($cfg) = @_;
+ my $person_id = $cfg->{cgi}->param('i') || 0;
+ my $date = $cfg->{cgi}->param('d') || 0;
+ my $sql;
+ my $sth;
+ my @td;
+ my $cur_date = '';
+ my $left = 1;
+
+   if ($person_id == 0) {
+      $sql = qq^SELECT vp.name, vp.person_id, Date(vl.date) as action_date,
+                       Max(vl.date)::timestamp(0) as last_date
+                FROM vote_person vp
+                JOIN vote_log vl ON vl.person_id = vp.person_id
+                GROUP BY vp.name, vp.person_id, Date(vl.date)
+                ORDER BY action_date DESC, last_date DESC^;
+
+      $sth = $cfg->{access}{_dbh}->prepare($sql);
+      $sth->execute();
+      while (my $s = $sth->fetch()) {
+         if ($cur_date ne $s->[2]) {
+            $left = !$left;
+            $cur_date = $s->[2];
+         }
+         push @td, th({-align=> ($left ? 'left' : 'right')},
+                      a(
+                         {-href=>'?a='._encode_param("show_log&i=$s->[1]&d=$s->[2]")}, 
+                         $s->[0]
+                      )
+                   ).
+                   td({-align=>'center'}, $s->[2]).
+                   td({-align=>'center'}, $s->[3])."\n";
+      }
+      $sth->finish();
+
+      unshift @td, th({-colspan=>3}, a({-href=>'?'}, '[Back]'))."\n",
+                   th('Person').th('Date').th('Action')."\n";
+   }
+   else {
+      $date = $cfg->{access}{_dbh}->quote($date);
+      $sql = qq^SELECT vp.name, vl.date::timestamp(0), vl.action
+                FROM vote_person vp
+                JOIN vote_log vl ON vl.person_id = vp.person_id
+                WHERE vl.person_id = $person_id
+                  AND date(vl.date) = $date
+                ORDER BY date DESC^;
+      $sth = $cfg->{access}{_dbh}->prepare($sql);
+      $sth->execute();
+      while (my $s = $sth->fetch()) {
+         push @td, td($s->[0]).td($s->[1]).td($s->[2])."\n";
+      }
+
+      unshift @td, th({-colspan=>3}, a({-href=>'?a='._encode_param('show_log')}, '[Back]'))."\n",
+                   th('Person').th('Date').th('Action')."\n";
+   }
+
+   print $cfg->{cgi}->center(
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>700},
+               Tr(\@td)))."\n";
+}
+
+sub check_vote($)
+{
+ my ($cfg) = @_;
+ my $sql = qq^SELECT vp.person_id, vp.name as person_name, vp.email, vp.login_tag, 
+                     vr.group_id, vr.name as vote_name, Count(vi.item_id)
+              FROM vote_person vp 
+              JOIN vote_person_group vpg ON vp.person_id = vpg.person_id 
+              JOIN vote_person_group vpg1 ON vpg.group_id = vpg1.group_id AND vpg1.person_id = $cfg->{id} 
+              JOIN vote_round vr ON vr.group_id = vpg.group_id AND vr.done IS NULL 
+              JOIN vote_item vi ON vi.vote_round_id = vr.vote_round_id AND vi.person_id = vpg.person_id 
+              GROUP BY vp.person_id, person_name,  vp.email, vp.login_tag, vote_name, vr.group_id 
+              ORDER BY group_id, vp.person_id^;
+}

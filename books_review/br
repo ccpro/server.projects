@@ -1,0 +1,584 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use CGI qw(:standard :html3);
+use DBI;
+use Data::Dumper;
+use Access;
+use DBConfig;
+
+sub edit_author($);
+sub save_author($);
+sub authors_list($);
+sub author_book_list($);
+
+sub save_review($);
+sub edit_review($);
+sub show_list($);
+
+sub genres_list($);
+sub edit_genre($);
+sub save_genre($);
+
+sub _author_dropdown($$);
+sub _genre_dropdown($$);
+
+my $cfg = {
+   action	=> CGI::param('action') || '',
+   cgi		=> CGI->new() || '',
+   id		=> CGI::param('id') || '',
+   ro		=> 1,
+   db_params	=> DBConfig::get_db_params(),
+};
+
+$cfg->{access} = Access->new(
+   dsn    => $cfg->{db_params}->[0],
+   login  => $cfg->{db_params}->[1],
+   passwd => $cfg->{db_params}->[2],
+);
+
+unless ( $cfg->{access}{_dbh} ) {
+   print 
+        $cfg->{cgi}->header(
+                -type  => 'text/html; charset=utf-8'
+        ).
+	$cfg->{cgi}->start_html(
+		-title=>'Books Review',
+		-style=>{'src'=>'/css/style.css'},
+		-head=>$cfg->{cgi}->meta({
+			-http_equiv=>'Content-Type',
+			-content=>'text/html',
+			-encoding=>'utf-8'
+		})
+	)."\n";
+        print $cfg->{cgi}->center(pre("$@::$!"))."\n".$cfg->{cgi}->end_html()."\n";
+        exit;
+};
+
+print 
+        $cfg->{cgi}->header(
+                -type  => 'text/html; charset=utf-8',
+        ).
+	$cfg->{cgi}->start_html(
+		-title=>'Books Review',
+		-style=>{
+		   'src'=>'/css/style.css'
+		},
+		-head=>$cfg->{cgi}->meta({
+			-http_equiv=>'Content-Type',
+			-content=>'text/html',
+			-encoding=>'utf-8'
+		})
+	)."\n";
+
+if ( exists($cfg->{access}{_access}{BOOK}) || exists($cfg->{access}{_access}{ADMIN})) {
+   $cfg->{ro} = 0;
+}
+                 
+if ($cfg->{action} eq 'ar') {
+   edit_review($cfg);
+} 
+elsif ($cfg->{action} eq 'aa') {
+   edit_author($cfg);
+}
+elsif ($cfg->{action} eq 'abl') {
+   author_book_list($cfg);
+}
+elsif ($cfg->{action} eq 'sa') {
+   save_author($cfg);
+   authors_list($cfg);
+}
+elsif ($cfg->{action} eq 'gl') { # genre list
+   genres_list($cfg);
+} 
+elsif ($cfg->{action} eq 'ag') { # add/edit genre
+   edit_genre($cfg);
+}
+elsif ($cfg->{action} eq 'sg') { # save genre
+   save_genre($cfg);
+   genres_list($cfg);
+}
+elsif ($cfg->{action} eq 'al') {
+   authors_list($cfg);
+}
+elsif ($cfg->{action} eq 'sr') {
+   save_review($cfg);
+   show_list($cfg);
+}
+else {
+   show_list($cfg);
+} 
+
+ $cfg->{access}{_dbh}->disconnect();
+print end_html()."\n";
+
+
+
+#
+#
+#
+
+sub _author_dropdown($$)
+{
+ my ($cfg, $id) = @_;
+
+ my $sql = "SELECT author_id, author_name FROM br_authors ORDER by author_name";
+
+# my %data;
+ my $select = "<select name='author_id'>\n";
+ my $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+ 
+   while (my $s = $sth->fetch()) {
+      $select .= "<option value='$s->[0]' ".(($s->[0]||0) == ($id||0) ? "selected='selected'" : '').">$s->[1]</option>\n";
+#      $data{$s->[0]} = $s->[1];
+   }
+   $sth->finish();
+   $select .= "<\select>\n";
+
+#   popup_menu(-name=>'author_id', -values=>[sort keys %data], -labels=>\%data, -default=>$id||0);
+}
+
+#
+#
+#
+sub _genre_dropdown($$)
+{
+ my ($cfg, $br_id) = @_;
+
+ $br_id ||= 0;
+
+ my $sql = qq^
+SELECT g.genre_id, g.genre_name, rg.genre_id FROM br_genres g 
+LEFT JOIN br_review_genres rg 
+ON rg.br_id = $br_id AND rg.genre_id = g.genre_id 
+ORDER BY g.genre_id^;
+
+ my $html = '';
+ my $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+ 
+   while (my $s = $sth->fetch()) {
+      $html .= ($html ne '' ? "<br />":"").
+               "<input type='checkbox' name='genre_id' value='$s->[0]' ".(($s->[2]||0) ? "checked='checked'" : '').">&nbsp;$s->[1]\n";
+   }
+   $sth->finish();
+   $html;
+}
+
+
+sub save_review($)
+{
+ my ($cfg) = @_;
+ my %data;
+ my $cgi = $cfg->{cgi};
+ my $dbh = $cfg->{access}{_dbh};
+ my @sql;
+ my $sql;
+ my @genres;
+
+#   print $cfg->{cgi}->Dump();
+
+   $data{id} = $cgi->param('id') || 0;
+   $data{author_id} = $cgi->param('author_id') || 0;
+   $data{book_name} = $dbh->quote($cgi->param('book_name') || '' );
+   $data{rate} = int($cgi->param('rate') || 0 );
+   $data{review} = $dbh->quote($cgi->param('review') || '' );
+   $data{url} = $dbh->quote($cgi->param('url') || '');
+   $data{series} = $cgi->param('series') || 0;
+   $data{in_progress} = $cgi->param('in_progress') || 0;
+
+   @genres = $cgi->param('genre_id');
+   return 0 if (scalar(@genres) == 0);
+
+   if ($data{id} > 0) {
+      $sql = "UPDATE books_review SET review = $data{review}, rate = $data{rate}, book_name = $data{book_name}, series = $data{series}, in_progress = $data{in_progress}, url = $data{url} WHERE br_id = $data{id}";
+   }
+   else{
+      $sql = "INSERT INTO books_review 
+                (author_id, book_name, rate, review, series, in_progress, url) 
+          VALUES($data{author_id}, $data{book_name}, $data{rate}, $data{review}, $data{series}, $data{in_progress}, $data{url})";
+   }
+
+   {
+      local $dbh->{AutoCommit} = 0;
+      local $dbh->{RaiseError} = 1;
+   
+      eval {
+         $dbh->do($sql);
+
+         if ($data{id} == 0) {   
+            $data{id} = $dbh->last_insert_id(undef, undef, 'books_review', 'br_id');
+         }
+
+         $dbh->do($sql = "DELETE FROM br_review_genres WHERE br_id = $data{id}");
+         foreach my $genre (@genres) {
+            $dbh->do($sql = "INSERT INTO br_review_genres VALUES($data{id}, $genre)");
+         }
+
+         $dbh->commit();
+      };
+      
+      if ( $@ ) {
+         $dbh->rollback();
+         print pre "$@\n $sql\n";
+         return $@;
+      }
+   }
+
+   '';
+}
+
+sub edit_review($)
+{
+ my ($cfg) = @_;
+ my $data = {};
+ my $sql;
+
+   if (($cfg->{id}||0) > 0) {
+      $sql = qq^SELECT * from books_review WHERE br_id = ?^;
+      $data = $cfg->{access}{_dbh}->selectrow_hashref($sql, undef, $cfg->{id});
+   }
+   
+   print 
+      br.br.
+      start_form(-method=>'post', -action=>$ENV{SCRIPT_NAME})."\n",
+      hidden(-name=>'id', -value=>$cfg->{id}, -override=>1),
+      hidden(-name=>'action', -value=>'sr', -override=>1),
+      table({-width=>'90%', -bgcolor=>'#777777', -bordercolor=>'#040404', -border=>2, -cellpadding=>1, -cellspacing=>0},
+         Tr([
+            td({-align=>'center', -colspan=>3}, 
+               a({-href=>'?'}, '[back]')
+            )."\n",
+         
+            td('author').td({-align=>'left'}, _author_dropdown($cfg, $data->{author_id}))."\n",
+            td('genre').td({-align=>'left'}, 
+               _genre_dropdown($cfg, $cfg->{id})
+            )."\n",
+            td('book').td({-align=>'left'}, textfield(-name=>'book_name', -size=>64, -maxlength=>128, -default=>($data->{book_name}||''), -override=>1))."\n",
+            td('rate').td({-align=>'left'}, textfield(-name=>'rate', -size=>4, -maxlength=>4, -default=>($data->{rate}||''), -override=>1))."\n",
+            td('series').td({-align=>'left'}, 
+                           checkbox(-name=>'series',
+                                    -checked=>($data->{series}||0),
+                                    -value=>'1'))."\n",
+            td('in progress').td({-align=>'left'}, 
+                           checkbox(-name=>'in_progress',
+                                    -checked=>($data->{in_progress}||0),
+                                    -value=>'1'))."\n",
+            td('url').td({-align=>'left'}, textfield(-name=>'url', -size=>128, -maxlength=>256, -default=>($data->{url}||''), -override=>1))."\n",
+            td('review').
+            td("<textarea name='review' id='review' rows='20' cols='120'>".($data->{review}||'')."</textarea>\n"
+                        )."\n",
+            td({-colspan=>2, -align=>'center'},
+               submit($cfg->{id} ? 'save' : 'add').('&nbsp;'x6).reset()
+            )."\n",
+         ])
+      )."\n";
+ 
+}
+
+sub author_book_list($)
+{
+  my ($cfg) = @_;
+  my $sql;
+  my $sth;
+  my @td;
+  my $comment;
+
+  $sql = qq^
+SELECT b.br_id, a.author_name, b.book_name, b.date, b.rate, 
+       (SELECT array_agg(g.genre_name) 
+        FROM br_review_genres gr 
+        JOIN br_genres g ON g.genre_id = gr.genre_id
+        WHERE gr.br_id = b.br_id) as genres, 
+       b.review, b.series, b.in_progress, b.url
+FROM books_review b 
+JOIN br_authors a ON a.author_id = b.author_id and a.author_id = $cfg->{id}
+ORDER BY b.rate DESC, a.author_name^;
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   
+   while (my $s = $sth->fetch()) {
+      $comment = $s->[6];
+      $comment =~ s/\n/<br>/gis;
+
+      push @td, td(b $s->[1]).
+                td(b $s->[2]).
+                td($s->[4]/10.).
+                td(join(br, @{$s->[5]}).br.
+                    (($s->[7]||0) ? 'серия':'').br.
+                    (($s->[8]||0) ? 'пишется':'')
+                ).
+                td($s->[3]).
+                td(a({-href=>"?action=ar&id=".$s->[0]}, '[e]'))."\n",
+                td({-colspan=>6}, $comment)."\n";
+   }
+   $sth->finish();
+                   
+   unshift @td, th({-colspan=>6}, a({-href=>'?'}, '[back]'))."\n",
+                th({-colspan=>2}, a({-href=>"?action=al"}, '[authors]').('&nbsp;' x3).a({-href=>"?action=aa"}, '[add author]')).
+                th({-colspan=>2}, a({-href=>"?action=gl"}, '[genres]').('&nbsp;' x3).a({-href=>"?action=ag"}, '[add genre]')).
+                th({-colspan=>2}, a({-href=>"?action=ar"}, '[add review]'))."\n",
+                th('Author').th('Book').th('Rate').th('Genre/Info').th('Date').th('')."\n";
+
+   print $cfg->{cgi}->center(
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>'90%'},
+               Tr(\@td)))."\n";
+}
+
+sub authors_list($)
+{
+ my ($cfg) = @_;
+ my $sql;
+ my $sth;
+ my @td;
+
+   $sql = qq^SELECT author_id, author_name FROM br_authors ORDER BY author_name^;
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+
+   while (my $s = $sth->fetch()) {
+      push @td, td($s->[0]).
+                td($s->[1]).
+                td(
+                   a({-href=>'?action=aa&id='.$s->[0]}, '[e]').'&nbsp;'.
+                   a({-href=>'?action=abl&id='.$s->[0]}, '[l]')
+                )."\n";
+   }
+   $sth->finish();
+                   
+   unshift @td, th({-colspan=>3}, a({-href=>'?'}, '[back]'))."\n",
+                th({-colspan=>3}, a({-href=>"?action=aa"}, '[add author]'))."\n",
+                th('id').th('Author').th('')."\n";
+
+   print $cfg->{cgi}->center(
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>700},
+               Tr(\@td)))."\n";
+}
+
+sub save_author($)
+{
+ my ($cfg) = @_;
+ my %data;
+ my $cgi = $cfg->{cgi};
+ my $dbh = $cfg->{access}{_dbh};
+ my $sql;
+
+   $data{id} = $cgi->param('id') || 0;
+   $data{author} = $dbh->quote($cgi->param('author') || '');
+   $data{comment} = $dbh->quote($cgi->param('comment') || '');
+   
+   if ($data{id} > 0) {
+      $sql = "UPDATE br_authors SET author_name = $data{author}, comment = $data{comment} WHERE author_id = $data{id}";
+   }
+   else{
+      $sql = "INSERT INTO br_authors (author_name, comment) VALUES($data{author}, $data{comment})";
+   }
+
+   {
+   local $dbh->{AutoCommit} = 0;
+   local $dbh->{RaiseError} = 1;
+   
+   eval {
+      $dbh->do($sql);
+      $dbh->commit();
+   };
+      
+   if ( $@ ) {
+      $dbh->rollback();
+      print pre "$@\n $sql\n";
+   }
+   }
+
+#   print $cfg->{cgi}->Dump();
+
+}
+
+sub edit_author($)
+{
+ my ($cfg) = @_;
+ my $data = {};
+
+   if (($cfg->{id}||0) > 0) {
+    my $sql = 'SELECT * FROM br_authors WHERE author_id = ?';
+      $data = $cfg->{access}{_dbh}->selectrow_hashref($sql, undef, $cfg->{id});
+   }
+   
+   print 
+      br.br.
+      start_form(-method=>'post', -action=>$ENV{SCRIPT_NAME})."\n",
+      hidden(-name=>'id', -value=>$cfg->{id}, -override=>1),
+      hidden(-name=>'action', -value=>'sa', -override=>1),
+      table({-width=>'80%', -bgcolor=>'#777777', -bordercolor=>'#040404', -border=>2, -cellpadding=>1, -cellspacing=>0},
+         Tr([
+            td({-align=>'center', -colspan=>3}, 
+               a({-href=>'?'}, '[back]')
+            )."\n",
+         
+            td('name').td({-width=>'5%'}, b($cfg->{id}||'new'))."\n",
+            td('author').td(textfield(-name=>'author', -size=>64, -maxlength=>64, -default=>($data->{author_name}||''), -override=>1))."\n",
+            td('comment').
+            td(textarea(-name=>'comment', -default=>($data->{comment}||''), 
+                        -rows=>20, -columns=>120))."\n",
+            td({-colspan=>3, -align=>'center'},
+               submit($cfg->{id}?'save':'add').('&nbsp;'x6).reset()
+            )."\n",
+         ])
+      )."\n";
+
+}
+
+sub show_list($)
+{
+ my ($cfg) = @_;
+ 
+ my $sql;
+ my $sth;
+ my @td;
+ my $comment;
+ 
+  $sql = qq^
+SELECT b.br_id, a.author_name, b.book_name, b.date, b.rate, 
+       (SELECT array_agg(g.genre_name) 
+        FROM br_review_genres gr 
+        JOIN br_genres g ON g.genre_id = gr.genre_id
+        WHERE gr.br_id = b.br_id) as genres, 
+       b.review, b.series, b.in_progress, b.url
+FROM books_review b 
+JOIN br_authors a ON a.author_id = b.author_id
+ORDER BY b.rate DESC, a.author_name^;
+
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+   
+   while (my $s = $sth->fetch()) {
+      $comment = $s->[6];
+      $comment =~ s/\n/<br>/gis;
+
+      push @td, td(b $s->[1]).
+                td(b $s->[2]).
+                td($s->[4]/10.).
+                td(join(br, @{$s->[5]}).br.
+                    (($s->[7]||0) ? 'серия':'').br.
+                    (($s->[8]||0) ? 'пишется':'')
+                ).
+                td($s->[3]).
+                td(a({-href=>"?action=ar&id=".$s->[0]}, '[e]'))."\n",
+                td({-colspan=>6}, $comment)."\n";
+   }
+   $sth->finish();
+                   
+   unshift @td, th({-colspan=>6}, a({-href=>'/'}, '[back]'))."\n",
+                th({-colspan=>2}, a({-href=>"?action=al"}, '[authors]').('&nbsp;' x3).a({-href=>"?action=aa"}, '[add author]')).
+                th({-colspan=>2}, a({-href=>"?action=gl"}, '[genres]').('&nbsp;' x3).a({-href=>"?action=ag"}, '[add genre]')).
+                th({-colspan=>2}, a({-href=>"?action=ar"}, '[add review]'))."\n",
+                th('Author').th('Book').th('Rate').th('Genre/Info').th('Date').th('')."\n";
+
+   print $cfg->{cgi}->center(
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>'90%'},
+               Tr(\@td)))."\n";
+}
+
+#
+# genres
+#
+
+sub genres_list($)
+{
+ my ($cfg) = @_;
+ my $sql;
+ my $sth;
+ my @td;
+
+   $sql = qq^SELECT genre_id, genre_name, comment FROM br_genres ORDER BY genre_name^;
+   $sth = $cfg->{access}{_dbh}->prepare($sql);
+   $sth->execute();
+
+   while (my $s = $sth->fetch()) {
+      push @td, td($s->[0]).
+                td($s->[1])."\n";
+      if (($s->[2] || '') ne '') {
+         push @td, td({-colspan=>2}, $s->[2])."\n";
+      }
+   }
+   $sth->finish();
+                   
+   unshift @td, th({-colspan=>2}, a({-href=>'?'}, '[back]'))."\n",
+                th({-colspan=>2}, a({-href=>"?action=ag"}, '[add genre]'))."\n",
+                th('id').th('genre')."\n";
+
+   print $cfg->{cgi}->center(
+            table({-border=>1, -cellspacing=>1, -cellpadding=>3, -width=>700},
+               Tr(\@td)))."\n";
+}
+
+sub save_genre($)
+{
+ my ($cfg) = @_;
+ my %data;
+ my $cgi = $cfg->{cgi};
+ my $dbh = $cfg->{access}{_dbh};
+ my $sql;
+
+   $data{id} = $cgi->param('id') || 0;
+   $data{genre} = $dbh->quote($cgi->param('genre') || '');
+   $data{comment} = $dbh->quote($cgi->param('comment') || '');
+   
+   if ($data{id} > 0) {
+      $sql = "UPDATE br_genress SET author_name = $data{genre}, comment = $data{comment} WHERE genre_id = $data{id}";
+   }
+   else{
+      $sql = "INSERT INTO br_genres (genre_name, comment) VALUES($data{genre}, $data{comment})";
+   }
+
+   {
+   local $dbh->{AutoCommit} = 0;
+   local $dbh->{RaiseError} = 1;
+   
+   eval {
+      $dbh->do($sql);
+      $dbh->commit();
+   };
+      
+   if ( $@ ) {
+      $dbh->rollback();
+      print pre "$@\n $sql\n";
+   }
+   }
+
+#   print $cfg->{cgi}->Dump();
+
+}
+
+sub edit_genre($)
+{
+ my ($cfg) = @_;
+ my $id = $cfg->{id};
+ my $data = {};
+
+   if ($cfg->{id} > 0) {
+   }
+   
+   print 
+      br.br.
+      start_form(-method=>'post', -action=>$ENV{SCRIPT_NAME})."\n",
+      hidden(-name=>'id', -value=>$id, -override=>1),
+      hidden(-name=>'action', -value=>'sg', -override=>1),
+      table({-width=>800, -bgcolor=>'#777777', -bordercolor=>'#040404', -border=>2, -cellpadding=>1, -cellspacing=>0},
+         Tr([
+            td({-align=>'center', -colspan=>3}, 
+               a({-href=>$ENV{SCRIPT_NAME}}, '[back]')
+            )."\n",
+         
+            td('id').td({-width=>'5%'}, b($id||'new'))."\n",
+            td('genre').td(textfield(-name=>'genre', -size=>64, -maxlength=>64, -default=>($data->{genre_name}||''), -override=>1))."\n",
+            td('comment').
+            td(textarea(-name=>'comment', -default=>($data->{comment}||''), 
+                        -rows=>20, -columns=>120))."\n",
+            td({-colspan=>2, -align=>'center'},
+               submit($id?'save':'add').('&nbsp;'x6).reset()
+            )."\n",
+         ])
+      )."\n";
+}

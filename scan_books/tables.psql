@@ -1,0 +1,20 @@
+drop sequence path_seq;
+create sequence path_seq;
+
+drop table book_paths;
+create table book_paths (
+   path_id	int				PRIMARY KEY DEFAULT nextval('path_seq'),
+   path		varchar(256)			NOT NULL,
+   created	timestamp without time zone	NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+drop table books_list;
+create table books_list(
+   date		timestamp without time zone	NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   path_id	int 				NOT NULL,
+   book		varchar(256)			NOT NULL,
+   isbn		varchar(13),
+   hash		varchar(64)			NOT NULL
+);
+
+create index bl_path_idx books_list(path_id);
