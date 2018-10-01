@@ -113,6 +113,9 @@ sub run {
             my ($month) = (localtime())[4];
             my $fname = buildFileName($cfg);
             syslog('news.err', "going to tail '$fname'");
+            
+            $cfg->{ip_list} = {};
+            rebuildRirewallRules($cfg);
 
             my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
             while (<FH>) {
