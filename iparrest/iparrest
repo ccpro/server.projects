@@ -23,7 +23,8 @@ my $cfg = {
    iface    => 're0',
    natd     => '/usr/local/etc/rc.d/fw.sh',
    filename => '',
-   keep_running => 1
+   keep_running => 1,
+   show_list    => 0
 };
 
 my $pf = '/var/run/iparrest.pid';
@@ -35,6 +36,12 @@ my $daemon = Proc::Daemon->new(
 # are you running?  Returns 0 if not.
 my $pid = $daemon->Status($pf);
 my $daemonize = 1;
+
+$SIG{USR1} = \&signal_handler;
+
+sub signal_handler {
+    $cfg->{show_list} = 1;
+}
 
 #Getopt::Long::Configure("permute");
 
@@ -103,6 +110,7 @@ sub run {
         }
 
         while(1) {
+            my ($month) = (localtime())[4];
             my $fname = buildFileName($cfg);
             syslog('news.err', "going to tail '$fname'");
 
@@ -112,8 +120,15 @@ sub run {
                    syslog('news.err', "new attack found from '$1'");
                    addIpAddress($cfg, $1);
                }
+               
+               last if ($month != (localtime())[4]);
             }
             sleep 5;
+            
+            if ($cfg->{show_list}) {
+               $cfg->{show_list} = 0;
+               show_status();
+            }
         }
     } else {
         print "already running with pid $pid\n";
