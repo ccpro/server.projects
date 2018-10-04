@@ -119,7 +119,7 @@ sub run {
 
             my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
             while (<FH>) {
-               if ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && $1 !~ /^10\.*./) {
+               if ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && $1 !~ /^10\.1\..*$/) {
                    syslog('news.err', "new attack found from '$1'");
                    addIpAddress($cfg, $1);
                }
