@@ -6,11 +6,13 @@ import pprint
 import calendar
 import psycopg2
 import os
+import syslog
 
 from datetime import datetime, timedelta
 
 def add_record_to_db(month, day, sunrise, sunset):
     insert = insert_template.format(local_zip, now.year, month, day, sunrise, sunset)
+    syslog.syslog(syslog.LOG_PID, 'going to add new sunrise-sunset time to db {0} : {1}/{2}'.format(today), sunrise, sunset)
     cur = psql_conn.cursor()
     cur.execute(insert)
     psql_conn.commit()
@@ -86,16 +88,23 @@ start_time = 655
 stop_time = 2345
 
 cloud_index = get_cloud_index()
+
+syslog.syslog(syslog.LOG_PID, 'cloud index is {0}'.format(cloud_index))
+
 time_offset = 10 * cloud_index
 
 if start_time < srss['sunrise']:
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at 0{0}'.format(start_time)
+    syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0} +{1} minutes'.format(srss['sunrise'], time_offset)
+    syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
 
 if stop_time > srss['sunset']:
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0} -{1} minutes'.format(srss['sunset'], time_offset)
+    syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at {0}'.format(stop_time)
+    syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
