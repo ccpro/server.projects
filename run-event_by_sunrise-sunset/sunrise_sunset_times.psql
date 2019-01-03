@@ -1,0 +1,15 @@
+drop table sunrise_sunset_times;
+drop sequence sunrise_sunset_times_seq_id;
+
+create sequence sunrise_sunset_times_seq_id;
+create table sunrise_sunset_times (
+	zip int not null,
+        year smallint not null,
+	month smallint not null,
+        day smallint not null,
+        sunrise int not null,
+        sunset int not null)
+with OIDs;
+
+create index zip_idx on sunrise_sunset_times(zip);
+create unique index mon_day_idx on sunrise_sunset_times(month, day);
