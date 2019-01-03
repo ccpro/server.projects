@@ -5,6 +5,7 @@ import json
 import pprint
 import calendar
 import psycopg2
+import os
 
 from datetime import datetime, timedelta
 
@@ -88,9 +89,13 @@ cloud_index = get_cloud_index()
 time_offset = 10 * cloud_index
 
 if start_time < srss['sunrise']:
-    os.system('echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0} runlight'.format(start_time))
-    os.system('echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0} +{1} minutes stoplight'.format(srss['sunrise'], time_offset))
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at 0{0}'.format(start_time)
+    os.system(cmd)
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0} +{1} minutes'.format(srss['sunrise'], time_offset)
+    os.system(cmd)
 
 if stop_time > srss['sunset']:
-    os.system('echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0} -{1} minutes'.format(srss['sunset'], time_offset))
-    os.system('echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at {0} stoplight'.format(stop_time))
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0} -{1} minutes'.format(srss['sunset'], time_offset)
+    os.system(cmd)
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at {0}'.format(stop_time)
+    os.system(cmd)
