@@ -7,6 +7,7 @@ import calendar
 import psycopg2
 import os
 import syslog
+import random
 
 from datetime import datetime, timedelta
 
@@ -86,6 +87,11 @@ psql_conn.close()
 
 start_time = 655
 stop_time = 2345
+
+weekday = now.weekday()
+if (0 == weekday or 6 == weekday or 3 == weekday):
+    r = random.randint(0, 15) - 5
+    start_time = 730 + r
 
 cloud_index = get_cloud_index()
 
