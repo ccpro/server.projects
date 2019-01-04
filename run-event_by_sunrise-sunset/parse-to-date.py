@@ -94,10 +94,10 @@ syslog.syslog(syslog.LOG_PID, 'cloud index is {0}'.format(cloud_index))
 time_offset = 10 * cloud_index
 
 if start_time < srss['sunrise']:
-    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at 0{0}'.format(start_time)
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0}'.format(start_time)
     syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
-    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0} +{1} minutes'.format(srss['sunrise'], time_offset)
+    cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at 0{0} +{1} minutes'.format(srss['sunrise'], time_offset)
     syslog.syslog(syslog.LOG_PID, cmd)
     os.system(cmd)
 
