@@ -89,7 +89,7 @@ start_time = 655
 stop_time = 2345
 
 weekday = now.weekday()
-if (5 == weekday or 6 == weekday or 2 == weekday):
+if (weekday in [5,6,2]):
     r = random.randint(0, 15) - 5
     start_time = 730 + r
     stop_time = 2330
