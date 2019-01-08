@@ -89,9 +89,10 @@ start_time = 655
 stop_time = 2345
 
 weekday = now.weekday()
-if (0 == weekday or 6 == weekday or 3 == weekday):
+if (5 == weekday or 6 == weekday or 2 == weekday):
     r = random.randint(0, 15) - 5
     start_time = 730 + r
+    stop_time = 2330
 
 cloud_index = get_cloud_index()
 
