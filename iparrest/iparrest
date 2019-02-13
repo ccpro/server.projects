@@ -18,6 +18,7 @@ sub buildFileName($);
 sub addIpAddress($$);
 sub removeIpAddress($$);
 sub rebuildRirewallRules($);
+sub handleCommand($$$);
 
 my $cfg = {
    ip_list  => {},
@@ -121,11 +122,10 @@ sub run {
 
             my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
             while (<FH>) {
-                if ($_ =~ /GET \/white\/(.*) HTTP/) {
-                    syslog('news.err', "going to add '$1' into white list");
-                    push @{$cfg->{white_list}}, $1;
+                if ($_ =~ /GET \/iparrest\/(.*)\/(.*) HTTP/) {
+                    handleCommand($cfg, $1, $2);
                 } 
-                if ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
+                elsif ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
                     $1 !~ /^10\.1\..*$/ && 
                     $_ !~ /delby/ &&
                     $_ !~ /\/lj\//) {
@@ -215,8 +215,6 @@ qq^
 
            print $fh $head;
 
-           print $fh "#\n# new ip \n#\n";
-
            for my $ip (keys %{$cfg->{ip_list}}) {
               print $fh sprintf $rule, $ip;
            }
@@ -232,4 +230,25 @@ qq^
    `mv /tmp/natd.sh $cfg->{natd}`; 
    `chmod u+x $cfg->{natd}`;
    `$cfg->{natd}`;
+}
+
+
+sub handleCommand($$$)
+{
+ my ($cfg, $cmd, $ip) = @_;
+
+    syslog('news.err', "received '$cmd/$ip' command");
+
+    if ('add-white' eq $cmd) {
+        syslog('news.err', "going to add '$ip' into white list");
+        push @{$cfg->{white_list}}, $ip;
+        removeIpAddress($cfg, $ip);
+    }
+    elsif ('show-list' eq $cmd) {
+        my $list = join("\n", keys %{$cfg->{ip_list}});
+        syslog('news.err', "black list:\n'$list'");
+        $list = join("\n", @{$cfg->{white_list}});
+        syslog('news.err', "white list:\n'$list'");
+    }
+
 }
