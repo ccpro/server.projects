@@ -8,6 +8,7 @@ import psycopg2
 import os, sys
 import syslog
 import random
+import time
 
 from datetime import datetime, timedelta
 
@@ -20,7 +21,7 @@ class Time:
         mins = mixedTime - hours * 100
         timeInMinutes = hours * 60 + mins
         return timeInMinutes
-
+        
     def __lt__(self, other):
         if isinstance(other, Time):
             return self.__timeInMinutes < other.__timeInMinutes
@@ -30,6 +31,25 @@ class Time:
         if isinstance(other, Time):
             return self.__timeInMinutes > other.__timeInMinutes
         return NotImplemented
+
+    def __gt__(self, min):
+        return self.__timeInMinutes > min
+
+    def __str__(self):
+        hrs = int(self.__timeInMinutes / 60)
+        mns = self.__timeInMinutes % 60
+        s = str(hrs) + ":" + str(mns)
+        return s
+
+    def __sub__(self, other) :
+        return Time(self.__timeInMinutes - other.__timeInMinutes)
+
+    def __add__(self, mins):
+        res = self.__timeInMinutes + mins
+        hrs = int(res / 60)
+        mns = res % 60
+        res = hrs * 100 + mns
+        return Time(res)
 
     def getMinutes(self):
         return self.__timeInMinutes
@@ -144,10 +164,18 @@ time_offset = 5 * dc
 if 1 == debug:
     print(f' sunrise: {srss["sunrise"]}, sunset: {srss["sunset"]}')
 
-sunrise = Time(srss['sunrise'])
-sunrise.addMinutes(time_offset)
+tm = time.localtime()
+dst_offset = 0
+if (tm.tm_isdst) :
+    dst_offset = 60
 
-if start_time < sunrise:
+if 1 == debug:
+    print(f'daylight savings time offset {dst_offset}')
+
+sunrise = Time(srss['sunrise'])
+sunrise.addMinutes(time_offset + dst_offset)
+
+if sunrise - start_time > 10:
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0}'.format(start_time.get())
     print(cmd)
     if 0 == debug:
@@ -160,9 +188,9 @@ if start_time < sunrise:
         os.system(cmd)
 
 sunset = Time(srss['sunset'])
-sunset.addMinutes(-time_offset)
+sunset.addMinutes(-time_offset + dst_offset)
 
-if stop_time > sunset:
+if stop_time - sunset > 10:
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at {0}'.format(sunset.get())
     print(cmd)
     if 0 == debug:
