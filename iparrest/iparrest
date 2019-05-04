@@ -17,7 +17,7 @@ use FileHandle;
 sub buildFileName($);
 sub addIpAddress($$);
 sub removeIpAddress($$);
-sub rebuildRirewallRules($);
+sub rebuildFirewallRules($);
 sub handleCommand($$$);
 
 my $cfg = {
@@ -27,7 +27,8 @@ my $cfg = {
    filename => '',
    keep_running => 1,
    show_list    => 0,
-   white_list => []
+   white_list => [],
+   block_ed   => 0,
 };
 
 my $pf = '/var/run/iparrest.pid';
@@ -75,7 +76,7 @@ sub stop {
 
 sub clean {
    print "removed all restrictions\n";
-   rebuildRirewallRules($cfg);
+   rebuildFirewallRules($cfg);
 }
 
 sub status {
@@ -118,7 +119,7 @@ sub run {
             syslog('news.err', "going to tail '$fname'");
             
             $cfg->{ip_list} = {};
-            rebuildRirewallRules($cfg);
+            rebuildFirewallRules($cfg);
 
             my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
             while (<FH>) {
@@ -171,7 +172,7 @@ sub removeIpAddress($$)
 
     if (exists($cfg->{ip_list}{$ip})) {
         delete $cfg->{ip_list}{$ip};
-        rebuildRirewallRules($cfg);
+        rebuildFirewallRules($cfg);
     }
 }
 
@@ -181,11 +182,11 @@ sub addIpAddress($$)
 
    unless (exists($cfg->{ip_list}{$ip})) {
       $cfg->{ip_list}{$ip} = time;
-      rebuildRirewallRules($cfg);
+      rebuildFirewallRules($cfg);
    }
 }
 
-sub rebuildRirewallRules($)
+sub rebuildFirewallRules($)
 {
    my ($cfg) = @_;
    my $time = time();
@@ -205,6 +206,12 @@ qq^
 /sbin/ipfw add allow gre from any to any keep-state
 /sbin/ipfw add pass all from any to any\n^;
 
+   if ($cfg->{block_ed}) {
+      $head .= qq^
+/sbin/ipfw add 150 deny ip from 10.1.1.68 to any
+/sbin/ipfw add 151 deny ip from 10.1.1.6 to any\n^;
+   }
+
    my $rule = "/sbin/ipfw add reject all from %s to any via $cfg->{iface}\n";
    my $deny_port = "/sbin/ipfw add deny tcp from %s %d to any in recv $cfg->{iface}";
 
@@ -223,7 +230,7 @@ qq^
        }
    };
    if ($@) {
-       syslog('news.err', "rebuildRirewallRules: error: $@");
+       syslog('news.err', "rebuildFirewallRules: error: $@");
    }
 
    `mv $cfg->{natd} $cfg->{natd}.$time.~`;
@@ -239,7 +246,10 @@ sub handleCommand($$$)
 
     syslog('news.err', "received '$cmd/$ip' command");
 
-    if ('add-white' eq $cmd) {
+    if ('list' eq $cmd) {
+     syslog('news.err', "add-white/ip, show-list, block-ed, unblock-ed");
+    }
+    elsif ('add-white' eq $cmd) {
         syslog('news.err', "going to add '$ip' into white list");
         push @{$cfg->{white_list}}, $ip;
         removeIpAddress($cfg, $ip);
@@ -249,6 +259,17 @@ sub handleCommand($$$)
         syslog('news.err', "black list:\n'$list'");
         $list = join("\n", @{$cfg->{white_list}});
         syslog('news.err', "white list:\n'$list'");
+        syslog('news.err', "ed block is ".($cfg->{block_ed} ? 'on':'off'));
+    }
+    elsif ('block-ed' eq $cmd) {
+        $cfg->{block_ed} = 1;
+        rebuildFirewallRules($cfg);
+        syslog('news.err', "ed blocked");
+    }
+    elsif ('unblock-ed' eq $cmd) {
+        $cfg->{block_ed} = 0;
+        rebuildFirewallRules($cfg);
+        syslog('news.err', "ed unblocked");
     }
 
 }
