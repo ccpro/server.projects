@@ -60,7 +60,6 @@ my $cfg = {
     show_list     => 0,
 
     ipfw          => '/sbin/ipfw',
-    interface     => 're0',
 
     deny_number   => 200,
     reject_number => 1000,
@@ -382,7 +381,7 @@ sub add_reject_rule($$)
     my ($cfg, $ip) = @_;
     my $reject_number = ++$cfg->{reject_number};
 
-    `$cfg->{ipfw} add $reject_number reject all from $ip to any via $cfg->{interface}`;
+    `$cfg->{ipfw} add $reject_number reject all from $ip to any via $cfg->{iface}`;
 }
 
 sub delete_rule($$)
