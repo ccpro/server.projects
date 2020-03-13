@@ -6,7 +6,7 @@ create table br_authors (
   author_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('br_author_seq_id'),
   author_name varchar(128) not null,
   comment text
-) with OIDs;
+);
 
 drop table br_genres;
 drop sequence br_genres_seq_id;
@@ -16,7 +16,7 @@ create table br_genres (
   genre_id smallint PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('br_genres_seq_id'),
   genre_name varchar(128) not null,
   comment text
-) with OIDs;
+);
 
 
 drop table books_review;
@@ -28,15 +28,16 @@ create table books_review (
    author_id smallint not null references br_authors(author_id),
    book_name varchar(128) not null,
    date date not null default current_date,
+   updated date not null default current_date,
    rate smallint not null,
    review text
-) with OIDs;
+) ;
 
 drop table br_review_genres;
 create table br_review_genres (
    br_id smallint not null references books_review(br_id),
    genre_id smallint not null references br_genres(genre_id)
-) with OIDs;
+) ;
 
 drop table br_coauthors;
 drop sequence br_coauthor_seq_id;
@@ -46,5 +47,5 @@ create table br_coauthors (
   id int PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('br_coauthor_seq_id'),
   book_id int not null references books_review(br_id),
   coauthor_id int not null references br_authors(author_id)
-) with OIDs;
+) ;
 create index br_ca_book_idx on br_coauthors(book_id);
