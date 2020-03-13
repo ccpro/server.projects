@@ -13,22 +13,82 @@ use Proc::Daemon;
 use Cwd;
 use File::Spec::Functions;
 use FileHandle;
+use JSON;
 
-sub buildFileName($);
-sub addIpAddress($$);
-sub removeIpAddress($$);
-sub rebuildFirewallRules($);
-sub handleCommand($$$);
+sub build_file_name($);
+sub add_ip_to_fw($$$$);
+sub remove_ip_from_fw($$);
+sub remove_ips_by_date_from_fw($$);
+sub rebuild_fw_ruleset($);
+sub handle_cmd($$$);
+sub reset_fw($);
+sub update_fw_file($);
+sub get_date($;$);
+sub parse_dhcpd_config($);
+
+=pod
+           ed         => {
+                             blocked => 0,
+                             info => [
+                                      {ip => '10.1.1.120', rule_number => 200},
+                                      {ip => '10.1.1.121', rule_number => 201},
+                                      {ip => '10.1.1.122', rule_number => 202},
+                                      {ip => '10.1.1.129', rule_number => 210}, 
+                                      {ip => '10.1.1.130', rule_number => 220}
+                                     ]
+                         },
+           xbox       => {
+                             blocked => 0,
+                             info => [{ip => '10.1.1.131', rule_number => 300}, {ip => '10.1.1.132', rule_number => 310}]
+                         },
+           googlehome => {
+                             blocked => 0,
+                             info => [{ip => '10.1.1.75', rule_number => 400}]
+                         },
+           tv         => {
+                             blocked => 0,
+                             info => [{ip => '10.1.1.128', rule_number => 500}]
+                         },
+=cut
 
 my $cfg = {
-   ip_list  => {},
-   iface    => 're0',
-   natd     => '/usr/local/etc/rc.d/fw.sh',
-   filename => '',
-   keep_running => 1,
-   show_list    => 0,
-   white_list => [],
-   block_ed   => 0,
+    iface         => 're0',
+    natd          => '/usr/local/etc/rc.d/fw.sh',
+    dhcpd_cfg     => '/usr/local/etc/dhcpd.conf',
+    filename      => '',
+    keep_running  => 1,
+    show_list     => 0,
+
+    ipfw          => '/sbin/ipfw',
+    interface     => 're0',
+
+    deny_number   => 200,
+    reject_number => 1000,
+
+    json          => JSON->new->allow_nonref,
+
+    data	=> {
+       white_list   => [],
+       reject_list  => {},
+       block        => {}
+    },
+    
+    job_queue	=> [],
+
+    months => {
+        'jan' => 1,
+        'feb' => 2,
+        'mar' => 3,
+        'apr' => 4,
+        'may' => 5,
+        'jun' => 6,
+        'jul' => 7,
+        'aug' => 8,
+        'sep' => 9,
+        'oct' => 10,
+        'nov' => 11,
+        'dec' => 12 
+    }
 };
 
 my $pf = '/var/run/iparrest.pid';
@@ -66,34 +126,37 @@ sub stop {
             print "stopping pid $pid...\n";
             if ($daemon->Kill_Daemon($pf)) {
                 print "successfully stopped.\n";
-            } else {
+            }
+            else {
                 print "could not find $pid. was it running?\n";
             }
-         } else {
+         }
+         else {
                 print "not running, nothing to stop.\n";
          }
 }
 
 sub clean {
    print "removed all restrictions\n";
-   rebuildFirewallRules($cfg);
+   rebuild_fw_ruleset($cfg);
 }
 
 sub status {
     if ($pid) {
         print "running with pid $pid.\n";
-        print "busted ".(scalar(keys %{$cfg->{ip_list}}))." ip addresses\n";
-        for my $ip (keys %{$cfg->{ip_list}}) {
-           print "ip: $ip was caught @ ".localtime($cfg->{ip_list}{$ip})."\n";
+        print "busted ".(scalar(keys %{$cfg->{data}{reject_list}}))." ip addresses\n";
+        for my $ip (keys %{$cfg->{data}{reject_list}}) {
+           print "ip: $ip was caught @ ".Dumper($cfg->{data}{reject_list}{$ip})."\n";
         }
-    } else {
+    }
+    else {
         print "not running.\n";
     }
 }
 
 sub reload {
   &stop;
-  $cfg->{ip_list} = {};
+  $cfg->{data}{reject_list} = {};
   &run;
 }
 
@@ -113,34 +176,105 @@ sub run {
             $daemon->Init;
         }
 
+        eval {
+            parse_dhcpd_config($cfg);
+        };
+        if ($@) {
+            syslog('news.err', "dhcpd parse failed: $@");
+        }
+
+#syslog('news.err', 'dhcpd info '.Dumper($cfg->{data}{block}));
+
+        eval {
+            my ($deny_list, $deny_max, $reject_list, $reject_max) = read_ipwf_list($cfg); 
+#syslog('news.err', 'deny max '.Dumper($deny_max, $deny_list));
+#syslog('news.err', 'reject max '.Dumper($reject_max));
+            $cfg->{deny_number} = $deny_max;
+            $cfg->{reject_number} = $reject_max;
+            for my $ip (keys %{$reject_list}) {
+                $cfg->{data}{reject_list}{$ip} = {number => $reject_list->{$ip}, date => get_date($cfg)};
+            }
+
+            for my $type (keys %{$cfg->{data}{block}}) {
+                my $do_block = 0;
+                for my $bi (@{$cfg->{data}{block}{$type}{info}}) {
+                    if (exists($deny_list->{$bi->{ip}})) {
+                        $do_block = 1;
+                        last;
+                    }
+                }
+
+#syslog('news.err', 'type '.Dumper($type, $do_block));
+
+                if ($do_block) {
+                    block_type($cfg, $type);
+                }
+                else {
+                    unblock_type($cfg, $type);
+                }
+
+syslog('news.err', "block $type ".Dumper($cfg->{data}{block}{$type}{blocked}));
+            }
+        };
+        if ($@) {
+            syslog('news.err', "error caught: $@");
+        }
+
+        eval {
+            update_fw_file($cfg);
+        };
+        if ($@) {
+            syslog('news.err', 'update_fw_file '.$@);
+        }
+
         while(1) {
             my ($month) = (localtime())[4];
-            my $fname = buildFileName($cfg);
+            my $fname = build_file_name($cfg);
             syslog('news.err', "going to tail '$fname'");
-            
-            $cfg->{ip_list} = {};
-            rebuildFirewallRules($cfg);
 
-            my $ref = tie *FH,"File::Tail", (name => $fname, interval => 20);
-            while (<FH>) {
-                if ($_ =~ /GET \/iparrest\/(.*)\/(.*) HTTP/) {
-                    handleCommand($cfg, $1, $2);
+            eval {            
+            my $tail = File::Tail->new(name => $fname, interval => 20);
+#            my $tail = File::Tail->new(name => $fname, interval => 20, maxinterval=>300, adjustafter=>7);
+            my $line;
+            my $deb = 0;
+            while (defined($line = $tail->read())) {
+                chomp $line;
+
+if ($line =~ /^108\.188\.18\.110\s.*?$/) {
+    $deb = 1;
+    syslog('news.err', "found unhandled line");
+} else {
+    $deb = 0;
+}
+
+                if ($line =~ /GET \/iparrest\/(.*)\/(.*) HTTP/) {
+                    handle_cmd($cfg, $1, $2);
                 } 
-                elsif ($_ =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
+                elsif ($line =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
                     $1 !~ /^10\.1\..*$/ && 
-                    $_ !~ /delby/ &&
-                    $_ !~ /\/lj\//) {
+                    $line !~ /delby/ &&
+                    $line !~ /\/lj\//) {
+
+if ($deb) {
+    syslog('news.err', "line in in");
+}
+
                  my $skip = 0;
-                    for my $ip (@{$cfg->{white_list}}) {
+                    for my $ip (@{$cfg->{data}{white_list}}) {
                         if ($1 eq $ip) {
                             $skip = 1;
                             last;
                         }
                     }
+
+if ($deb) {
+    syslog('news.err', "skip is $skip");
+}
                     unless ($skip) {
-                        syslog('news.err', "new attack found from '$1'");
-                        addIpAddress($cfg, $1);
-                    }
+                        my $date = get_date($cfg, $2);
+                        add_ip_to_fw($cfg, $1, $line, $date);
+                        update_fw_file($cfg);
+                     }
                }
                
                last if ($month != (localtime())[4]);
@@ -151,13 +285,25 @@ sub run {
                $cfg->{show_list} = 0;
                show_status();
             }
+            };
+            if ($@) {
+                syslog('news.err', "tail error : $@");
+            }
+            
+            for my $c (@$cfg->{job_queue}) {
+                if (!$c->{handled} && $c->{date} < time) {
+                    handle_cmd($cfg, $c->{command}, '');
+                    $c->{handled} = 1;
+                }
+            }
         }
-    } else {
+    }
+    else {
         print "already running with pid $pid\n";
     }
 }
 
-sub buildFileName($)
+sub build_file_name($)
 {
  my ($cfg) = @_;
  my ($month, $year) = (localtime())[4..5];
@@ -166,71 +312,231 @@ sub buildFileName($)
    $fname;
 }
 
-sub removeIpAddress($$)
+sub read_ipwf_list($)
 {
- my ($cfg, $ip) = @_;
+    my ($cfg) = @_;
+    my %deny;
+    my $deny_max = $cfg->{deny_number};
+    my %reject;
+    my $reject_max = $cfg->{reject_number};
 
-    if (exists($cfg->{ip_list}{$ip})) {
-        delete $cfg->{ip_list}{$ip};
-        rebuildFirewallRules($cfg);
+    my $list = `$cfg->{ipfw} list`;
+    foreach my $l (split('\n', $list)) {
+
+        if ($l =~ /deny/) {
+           my ($num, $ip) = grab_ip_num($l);
+           $deny{$ip} = $num;
+           $deny_max = $num > $deny_max ? $num : $deny_max;
+        }
+        if ($l =~ /reject/) {
+           my ($num, $ip) = grab_ip_num($l);
+           $reject{$ip} = $num;
+           $reject_max = $num > $reject_max ? $num : $reject_max;
+        }
+    }
+
+    (\%deny, $deny_max, \%reject, $reject_max);
+}
+
+sub update_fw_file($)
+{
+    my ($cfg) = @_;
+
+    my $filename = '/usr/home/ccpro/www/iparrest/fw_list';
+
+    sleep(2);
+    eval {
+
+        my $fh = FileHandle->new("> $filename");
+        if (defined($fh)) {
+            my @list = split("\n", $cfg->{json}->pretty->encode($cfg->{data}));
+            for my $l (@list) {
+                print $fh "$l\n";
+            }
+            $fh->close();
+        };
+    };
+    if ($@) {
+        syslog('news.err', "update_fw_file: error: $@");
+    }
+    `chown www:www $filename`;
+}
+
+sub grab_ip_num($)
+{
+    my ($line) = @_;
+    my @parts = split(' ', $line);
+
+    (int($parts[0]), $parts[4]);
+}
+
+sub add_deny_rule($$$)
+{
+    my ($cfg, $ip, $rule_number) = @_;
+
+    `$cfg->{ipfw} add $rule_number deny ip from $ip to any`;
+}
+
+sub add_reject_rule($$)
+{
+    my ($cfg, $ip) = @_;
+    my $reject_number = ++$cfg->{reject_number};
+
+    `$cfg->{ipfw} add $reject_number reject all from $ip to any via $cfg->{interface}`;
+}
+
+sub delete_rule($$)
+{
+    my ($cfg, $rule_number) = @_;
+
+    if (int $rule_number > 0) {
+        `$cfg->{ipfw} delete $rule_number`;
     }
 }
 
-sub addIpAddress($$)
+sub block_type($$;$)
+{
+    my ($cfg, $type, $args) = @_;
+    my @block_info;
+    
+    for my $i (@{$cfg->{data}{block}{$type}{info}}) {
+        push @block_info, [$i->{ip}, $i->{rule_number}];
+    }
+
+    for my $bi (@block_info) {
+        add_deny_rule($cfg, $bi->[0], $bi->[1]);
+    }    
+    $cfg->{data}{block}{$type}{blocked} = 1;
+}
+
+sub unblock_type($$;$)
+{
+    my ($cfg, $type, $args) = @_;
+    my @unblock_info;
+    
+    for my $i (@{$cfg->{data}{block}{$type}{info}}) {
+        push @unblock_info, $i->{rule_number}
+    }
+
+    for my $ui (@unblock_info) {
+        delete_rule($cfg, $ui);
+    }
+    $cfg->{data}{block}{$type}{blocked} = 0;
+    
+    if (defined($args) && ref($args) eq 'ARRAY' && scalar(@$args) > 0) {
+        my $command = "block_$type";
+        my $time_diff = int ($args->[0] || 0);
+        
+        if ($time_diff > 0) {
+            push @{$cfg->{job_queue}}, {command => $command, date => time + $time_diff * 3600, handled => 0};
+        }
+    }
+}
+
+sub add_ip_to_fw($$$$)
+{
+    my ($cfg, $ip, $reason, $date) = @_;
+    my $handled = 0;
+
+my $deb = 0;
+if ($ip eq '108.188.18.110' || $ip eq '5.101.0.209') {
+    $deb = 1;
+    syslog('news.err', Dumper($ip));
+    syslog('news.err', Dumper($cfg->{data}{reject_list}{$ip}));
+    syslog('news.err', Dumper($ip, $reason, $date));
+}
+
+    if (exists($cfg->{data}{reject_list}{$ip})) {
+        push @{$cfg->{data}{reject_list}{$ip}{reason}}, $reason;
+        $cfg->{data}{reject_list}{$ip}{date} = $date;
+
+syslog('news.err', "attack from '$ip' updated") if $deb;
+        $handled = 1;
+    }
+    else {
+        add_reject_rule($cfg, $ip);
+        $cfg->{data}{reject_list}{$ip} = {
+            number => $cfg->{reject_number},
+            date   => $date,
+            reason => \($reason),
+        };
+        $handled = 1;
+        syslog('news.err', "new attack found from '$ip' \@ $date");
+    }
+    
+    if ($handled) {
+        syslog('news.err', "attack from '$ip' wasn't handled");
+    }
+}
+
+sub remove_ip_from_fw($$)
 {
  my ($cfg, $ip) = @_;
 
-   unless (exists($cfg->{ip_list}{$ip})) {
-      $cfg->{ip_list}{$ip} = time;
-      rebuildFirewallRules($cfg);
-   }
+    if (exists($cfg->{data}{reject_list}{$ip})) {
+        delete_rule($cfg, $cfg->{data}{reject_list}{$ip});
+        syslog('news.err', "'$ip' address was removed from firewall");
+        delete $cfg->{data}{reject_list}{$ip};
+    }
 }
 
-sub rebuildFirewallRules($)
+sub remove_ips_by_date_from_fw($$)
 {
-   my ($cfg) = @_;
-   my $time = time();
-   my $head = 
+    my ($cfg, $date) = @_;
+    my $total_removed_ips = 0;
+
+    for my $ip (keys %{$cfg->{data}{reject_list}}) {
+        if ($date eq $cfg->{data}{reject_list}{$ip}{date}) {
+            delete_rule($cfg, $cfg->{data}{reject_list}{$ip});
+            delete $cfg->{data}{reject_list}{$ip};
+            ++$total_removed_ips;
+        }
+    }
+    
+    syslog('news.err', "$total_removed_ips addresses were removed by '$date' from firewall");
+}
+
+sub reset_fw($)
+{
+    my ($cfg) = @_;
+    my $time = time();
+    my $head = 
 qq^#!/bin/sh
    
 #/sbin/natd -config /etc/natd.conf
    
 /sbin/ipfw -f flush
-/sbin/ipfw add divert natd all from any to any via $cfg->{iface}\n
+/sbin/ipfw add 100 divert natd all from any to any via $cfg->{iface}\n
 #/sbin/ipfw add allow tcp from any to any 18081 in\n
 #/sbin/ipfw add fwd 10.1.1.103, 18081 tcp from any to any 18081 in\n
 \n^;
    my $tail =
 qq^
 
-/sbin/ipfw add allow gre from any to any keep-state
-/sbin/ipfw add pass all from any to any\n^;
+/sbin/ipfw add 50000 allow gre from any to any keep-state
+/sbin/ipfw add 50100 pass all from any to any\n^;
 
-   if ($cfg->{block_ed}) {
-      $head .= qq^
-/sbin/ipfw add 150 deny ip from 10.1.1.68 to any
-/sbin/ipfw add 151 deny ip from 10.1.1.6 to any\n^;
-   }
-
-   my $rule = "/sbin/ipfw add reject all from %s to any via $cfg->{iface}\n";
-   my $deny_port = "/sbin/ipfw add deny tcp from %s %d to any in recv $cfg->{iface}";
-
+    for my $type (keys %{$cfg->{data}{block}}) {
+        if ($cfg->{data}{block}{$type}{blocked}) {
+            for my $bi (@{$cfg->{data}{block}{$type}{info}}) {
+                $head .= "/sbin/ipfw add $bi->{rule_number} deny ip from $bi->{ip} to any\n";
+            }
+        }
+    }
 
    eval {
        my $fh = FileHandle->new("> /tmp/natd.sh");
        if (defined $fh) {
 
            print $fh $head;
-
-           for my $ip (keys %{$cfg->{ip_list}}) {
-              print $fh sprintf $rule, $ip;
-           }
            print $fh $tail;
            $fh->close;
+           
+           $cfg->{reject_number} = 1000;
        }
    };
    if ($@) {
-       syslog('news.err', "rebuildFirewallRules: error: $@");
+       syslog('news.err', "rebuild_fw_ruleset: error: $@");
    }
 
    `mv $cfg->{natd} $cfg->{natd}.$time.~`;
@@ -239,37 +545,187 @@ qq^
    `$cfg->{natd}`;
 }
 
-
-sub handleCommand($$$)
+sub handle_cmd($$$)
 {
- my ($cfg, $cmd, $ip) = @_;
+    my ($cfg, $cmd, $args) = @_;
+    
+    my @args = split('/', $args);
+    my $ip = shift @args;
 
     syslog('news.err', "received '$cmd/$ip' command");
 
     if ('list' eq $cmd) {
-     syslog('news.err', "add-white/ip, show-list, block-ed, unblock-ed");
+     syslog('news.err', "add-white/ip, show-list, block-ed, unblock-ed, clear-list, unblock-ip/ip, block-ip/ip, reset-fw");
     }
     elsif ('add-white' eq $cmd) {
         syslog('news.err', "going to add '$ip' into white list");
-        push @{$cfg->{white_list}}, $ip;
-        removeIpAddress($cfg, $ip);
+        push @{$cfg->{data}{white_list}}, $ip;
+        remove_ip_from_fw($cfg, $ip);
+        update_fw_file($cfg);
     }
     elsif ('show-list' eq $cmd) {
-        my $list = join("\n", keys %{$cfg->{ip_list}});
+        my $list = join("\n", keys %{$cfg->{data}{reject_list}});
         syslog('news.err', "black list:\n'$list'");
-        $list = join("\n", @{$cfg->{white_list}});
+        $list = join("\n", @{$cfg->{data}{white_list}});
         syslog('news.err', "white list:\n'$list'");
-        syslog('news.err', "ed block is ".($cfg->{block_ed} ? 'on':'off'));
+        for my $key (keys %{$cfg->{data}{block}}) {
+            syslog('news.err', "$key is ".($cfg->{data}{block}{$key}{blocked} ? 'blocked':'unblocked'));
+        }
     }
-    elsif ('block-ed' eq $cmd) {
-        $cfg->{block_ed} = 1;
-        rebuildFirewallRules($cfg);
-        syslog('news.err', "ed blocked");
+    elsif ('clear-list' eq $cmd) {
+        for my $ip (keys %{$cfg->{data}{reject_list}}) {
+            remove_ip_from_fw($cfg, $ip);
+        }
+        syslog('news.err', "all ip addresses were removed from firewall");
+        $cfg->{reject_number} = 1000;
+        update_fw_file($cfg);
     }
-    elsif ('unblock-ed' eq $cmd) {
-        $cfg->{block_ed} = 0;
-        rebuildFirewallRules($cfg);
-        syslog('news.err', "ed unblocked");
+    elsif ('clear-one-liners' eq $cmd) {
+        my $count = 0;
+        for my $ip (keys %{$cfg->{data}{reject_list}}) {
+            if (exists($cfg->{data}{reject_list}{$ip}{reason}) && 
+                'ARRAY' eq (ref $cfg->{data}{reject_list}{$ip}{reason})||'') {
+                if (1 == scalar(@{$cfg->{data}{reject_list}{$ip}{reason}})) {
+                    remove_ip_from_fw($cfg, $ip);
+                    ++$count;
+                }
+            }
+        }
+        syslog('news.err', "$count one line ip addresses were removed from firewall");
+        update_fw_file($cfg);
+    }
+    elsif ($cmd =~ /^block-(.*?)$/) {
+        my $type = $1;
+        if (exists($cfg->{data}{block}{$type})) {
+            block_type($cfg, $type, \@args);
+            syslog('news.err', "$type blocked");
+            update_fw_file($cfg);
+        }
+        elsif ('block-ip' eq $cmd) {
+            add_ip_to_fw($cfg, $ip, 'added externally', get_date($cfg));
+            syslog('news.err', "'$ip' blocked");
+            update_fw_file($cfg);
+        }
+    }
+    elsif ($cmd =~ /^unblock-(.*?)$/) {
+        my $type = $1;
+        if (exists($cfg->{data}{block}{$type})) {
+            unblock_type($cfg, $type, \@args);
+            syslog('news.err', "$type unblocked");
+            update_fw_file($cfg);
+        }
+        elsif ('unblock-ip' eq $cmd) {
+            remove_ip_from_fw($cfg, $ip);
+            syslog('news.err', "'$ip' unblocked");
+            update_fw_file($cfg);
+        }
+        elsif ('unblock-date' eq $cmd) {
+            remove_ips_by_date_from_fw($cfg, $ip);
+            update_fw_file($cfg);
+        }
+    }
+    elsif ('reset-fw' eq $cmd) {
+        reset_fw($cfg);
+        syslog('news.err', "firewall was reset");
+        update_fw_file($cfg);
+    }
+}
+
+sub get_date($;$)
+{
+    my ($cfg, $d) = @_;
+    my @d = split('/', ($d||''));
+    my $date = '';
+
+    if (3 != scalar(@d)) {
+        my ($day, $month, $year) = (localtime())[3..5];
+        $date = sprintf "%d-%02d-%02d", $year + 1900, $month + 1, $day;
+    } else {
+        my @y = split(':', $d[2]);
+        $date = sprintf "%d-%02d-%02d", $y[0], $cfg->{months}{lc($d[1])}, $d[0];
     }
 
+    $date;
+}
+
+sub parse_host_line($);
+sub find_ip($);
+sub parse_dhcpd_config($)
+{
+    my ($cfg, $d) = @_;
+    my $lines = '';
+
+    eval {
+        local $/;
+        open my $fh, '<', $cfg->{dhcpd_cfg} or die "Can't open file $!";
+        $lines = <$fh>;
+
+        close $fh;
+
+    };
+    if ($@) {
+        print $@."\n";
+    }
+
+    my @hosts = split(/(host.*?\})/si, $lines);
+
+    for my $l (@hosts) {
+        if ($l =~ /^host/) {
+            $l =~ s/\n//gs;
+        
+            my $data = parse_host_line($l);
+            my $key = $data->{group_name};
+
+syslog('news.err', "data ".Dumper($data));
+
+            unless (exists($cfg->{data}{block}{$key})) {
+                $cfg->{data}{block}{$key}{info} = [];
+                $cfg->{data}{block}{$key}{blocked} = 0;
+            }
+        
+            push @{$cfg->{data}{block}{$key}{info}}, {ip => $data->{ip}, rule_number => $data->{rule_number}};
+
+#syslog('news.err', "$key ".Dumper($cfg->{data}{block}{$key}));
+
+        }
+    };
+
+}
+
+#
+sub parse_host_line($)
+{
+    my ($line) = @_;
+    my $data = {};
+    
+    if ($line =~ /host.*?([a-z0-9_]*)\s+\{(.*?)\}/) {
+        my ($section_name, $section_data) = ($1, $2);
+
+        my @parts = split('_', $section_name);
+        my ($ip, $rule_number) = find_ip($section_data);
+        
+        $data = {
+                    group_name => $parts[1],
+                    ip => $ip, 
+                    device_name => $parts[2], 
+                    rule_number => $rule_number,
+                };
+    }
+    $data;
+}
+
+#
+sub find_ip($)
+{
+    my ($line) = @_;
+    my $ip = '';
+    my $rule_number = 0;
+    
+    if ($line =~ /fixed-address.*?([0-9.]*);/) {
+        $ip = $1;
+        my @parts = split('\.', $ip);
+        $rule_number = int $parts[3];
+    }
+
+    ($ip, $rule_number);
 }
