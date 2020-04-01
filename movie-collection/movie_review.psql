@@ -1,0 +1,22 @@
+drop table movie_review;
+drop sequence movie_review_id_seq;
+
+CREATE SEQUENCE movie_review_id_seq;
+create table movie_review (
+   id int PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('movie_review_id_seq'),
+   rate smallint not null,
+   imdb_rate smallint not null default 0,
+   date date not null default CURRENT_DATE,
+   reference varchar(256) not null default '',
+   name varchar(256) not null,
+   review text not null,
+   checked smallint not null default 0
+) ;
+
+ALTER TABLE movie_review ADD CONSTRAINT ref_unique UNIQUE (reference);
+ALTER TABLE movie_review ADD COLUMN imdb_rated varchar(65) not null default 'G';
+ALTER TABLE movie_review ADD COLUMN imdb_year smallint not null default 0;
+ALTER TABLE movie_review ADD COLUMN imdb_runtime smallint not null default 0;
+ALTER TABLE movie_review ADD COLUMN imdb_genre varchar(128) not null default '';
+ALTER TABLE movie_review ADD COLUMN imdb_country varchar(128) not null default '';
+ALTER TABLE movie_review ADD COLUMN imdb_plot text;

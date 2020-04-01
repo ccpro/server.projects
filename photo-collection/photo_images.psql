@@ -1,0 +1,12 @@
+drop table if exists photo_images cascade;
+drop sequence photo_images_id_seq;
+
+CREATE SEQUENCE photo_images_id_seq;
+create table photo_images (
+   id int PRIMARY KEY UNIQUE NOT NULL DEFAULT nextval('photo_images_id_seq'),
+   type smallint not null,
+   date date not null,
+   path varchar(256) not null default '',
+   album varchar(128) not null,
+   image varchar(64) not null
+);
