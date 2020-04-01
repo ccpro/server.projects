@@ -16,12 +16,10 @@ my $dbh = DBI->connect(@{DBConfig::get_db_params()}) || die "Error: Can not conn
 my %counter_types = (
    1	=> 'Live Journal',
    2	=> 'Dream Width',
-   3	=> 'Craigslist'
 );
 
 compact_lj_counter($dbh, 1);
 compact_lj_counter($dbh, 2);
-compact_lj_counter($dbh, 3);
 compact_visitors($dbh);
 
 $dbh->do("vacuum full");
@@ -34,12 +32,10 @@ sub compact_lj_counter($$)
  my ($dbh, $counter_type) = @_;
 
  my $select_sql = qq^
-SELECT lj_item as item, ip, Date(date), Count(*) 
+SELECT lj_item as item, ip, Date(date), sum(total_hits) as count
 FROM lj_counter
-WHERE done=0 AND date < CURRENT_DATE - 1 
-  AND counter_type = $counter_type
+WHERE counter_type = $counter_type
 GROUP BY lj_item, ip, Date(date)
-Having Count(*) > 1 
 ORDER BY lj_item^;
 
 print $select_sql."\n";
@@ -66,8 +62,8 @@ print $select_sql."\n";
 
    foreach my $d (@data) {
       @sql = ();
-      push @sql, qq^delete from lj_counter where done = 0 and lj_item = $d->{item} and ip = '$d->{ip}' and date(date) = '$d->{date}' and counter_type = $counter_type^;
-      push @sql, qq^insert into lj_counter (lj_item, ip, date, total_hits, done, counter_type) values($d->{item}, '$d->{ip}', '$d->{date}', $d->{count}, 1, $counter_type)^;
+      push @sql, qq^delete from lj_counter where lj_item = $d->{item} and ip = '$d->{ip}' and date(date) = '$d->{date}' and counter_type = $counter_type^;
+      push @sql, qq^insert into lj_counter (lj_item, ip, date, total_hits, counter_type) values($d->{item}, '$d->{ip}', '$d->{date}', $d->{count}, $counter_type)^;
 
       if ($item != $d->{item}) {
          $item = $d->{item};
@@ -79,7 +75,6 @@ print $select_sql."\n";
        
       eval {
          $dbh->do($sql = $_) foreach (@sql);
-         $dbh->do("update lj_counter set done = 1 where done = 0 and date < CURRENT_DATE - 1");
          $dbh->commit();
       };
       if ($@) {
@@ -94,7 +89,7 @@ sub compact_visitors($)
  my ($dbh) = @_;
 
  my $select_sql = qq^
-SELECT vdate, ip, url_path, Count(total_hits) as count 
+SELECT vdate, ip, url_path, sum(total_hits) as count 
 FROM visitors
 WHERE done = 0 AND vdate < CURRENT_DATE -1
 GROUP BY vdate, ip, url_path
