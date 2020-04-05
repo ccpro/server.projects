@@ -17,4 +17,4 @@ CREATE TABLE events
 	repeat		interval	NOT NULL
 					DEFAULT "interval"(0),
 	description	varchar(255)
-) WITH OIDs;
+);

@@ -42,7 +42,9 @@ class Time:
         return s
 
     def __sub__(self, other) :
-        return Time(self.__timeInMinutes - other.__timeInMinutes)
+        if isinstance(other, Time):
+            return Time(self.__timeInMinutes - other.__timeInMinutes)
+        return NotImplemented
 
     def __add__(self, mins):
         res = self.__timeInMinutes + mins

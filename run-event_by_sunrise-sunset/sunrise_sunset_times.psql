@@ -9,7 +9,7 @@ create table sunrise_sunset_times (
         day smallint not null,
         sunrise int not null,
         sunset int not null)
-with OIDs;
+;
 
 create index zip_idx on sunrise_sunset_times(zip);
 create unique index mon_day_idx on sunrise_sunset_times(month, day);

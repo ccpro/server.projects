@@ -8,9 +8,9 @@ create table phone_call (
    airtime      varchar(20), 
    toll         varchar(20),
    total        varchar(20) 
-) with OIDs;
+) ;
 
 create table unused_phones (
    number	varchar(16) PRIMARY KEY UNIQUE NOT NULL,
    description	varchar(128)
-) with OIDs;
+) ;

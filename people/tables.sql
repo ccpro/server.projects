@@ -29,4 +29,4 @@ CREATE TABLE persons
    note		text,
    privateyn	smallint		NOT NULL DEFAULT 0,
    category	varchar(32)
-) WITH OIDs;
+) ;
