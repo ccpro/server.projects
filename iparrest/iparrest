@@ -25,6 +25,7 @@ sub reset_fw($);
 sub update_fw_file($);
 sub get_date($;$);
 sub parse_dhcpd_config($);
+sub parse_time($); 
 
 =pod
            ed         => {
@@ -103,6 +104,7 @@ my $daemonize = 1;
 $SIG{USR1} = \&signal_handler;
 
 sub signal_handler {
+    syslog('news.err', "USR1 caught");
     $cfg->{show_list} = 1;
 }
 
@@ -212,7 +214,7 @@ sub run {
                     unblock_type($cfg, $type);
                 }
 
-syslog('news.err', "block $type ".Dumper($cfg->{data}{block}{$type}{blocked}));
+#syslog('news.err', "block $type ".Dumper($cfg->{data}{block}{$type}{blocked}));
             }
         };
         if ($@) {
@@ -246,7 +248,7 @@ if ($line =~ /^108\.188\.18\.110\s.*?$/) {
     $deb = 0;
 }
 
-                if ($line =~ /GET \/iparrest\/(.*)\/(.*) HTTP/) {
+                if ($line =~ /GET \/iparrest\/(.*)\/(.*?) HTTP/) {
                     handle_cmd($cfg, $1, $2);
                 } 
                 elsif ($line =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
@@ -277,8 +279,22 @@ if ($deb) {
                }
                
                last if ($month != (localtime())[4]);
+
+#syslog('news.err', 'job_queue');
+#syslog('news.err', Dumper($cfg->{job_queue}));
+                for my $c (@{$cfg->{job_queue}}) {
+
+my $diff = $c->{date} - time;
+#syslog('news.err', "diff : $diff");
+
+                    if (!$c->{handled} && $c->{date} < time) {
+#syslog('news.err', "job '$c->{command}' found in job_queue");
+                        handle_cmd($cfg, $c->{command}, '');
+                        $c->{handled} = 1;
+                    }
+                }
             }
-            sleep 5;
+            sleep 2;
             
             if ($cfg->{show_list}) {
                $cfg->{show_list} = 0;
@@ -289,12 +305,6 @@ if ($deb) {
                 syslog('news.err', "tail error : $@");
             }
             
-            for my $c (@$cfg->{job_queue}) {
-                if (!$c->{handled} && $c->{date} < time) {
-                    handle_cmd($cfg, $c->{command}, '');
-                    $c->{handled} = 1;
-                }
-            }
         }
     }
     else {
@@ -342,16 +352,22 @@ sub update_fw_file($)
     my ($cfg) = @_;
 
     my $filename = '/usr/home/ccpro/www/iparrest/fw_list';
+    my $dump = '/usr/home/ccpro/www/iparrest/fw_list.dump';
 
-    sleep(2);
+    sleep(1);
     eval {
 
         my $fh = FileHandle->new("> $filename");
         if (defined($fh)) {
-            my @list = split("\n", $cfg->{json}->pretty->encode($cfg->{data}));
-            for my $l (@list) {
-                print $fh "$l\n";
-            }
+            my $list = $cfg->{json}->pretty->encode($cfg->{data});
+            print $fh $list;
+            $fh->close();
+        };
+        
+        $fh = FileHandle->new("> $dump");
+        if (defined($fh)) {
+            my $dump = Dumper($cfg->{data});
+            print $fh $dump;
             $fh->close();
         };
     };
@@ -422,12 +438,23 @@ sub unblock_type($$;$)
     }
     $cfg->{data}{block}{$type}{blocked} = 0;
     
+#syslog('news.err', 'args for job_queue'.Dumper($args));
+
     if (defined($args) && ref($args) eq 'ARRAY' && scalar(@$args) > 0) {
-        my $command = "block_$type";
-        my $time_diff = int ($args->[0] || 0);
+        my $command = "block-$type";
+        my $time_to_block = $args->[0] || '';
         
-        if ($time_diff > 0) {
-            push @{$cfg->{job_queue}}, {command => $command, date => time + $time_diff * 3600, handled => 0};
+        if ('' ne $time_to_block) {
+            my $time_diff = parse_time($time_to_block);
+
+#syslog('news.err', "time_to_block : $time_to_block, time_diff : $time_diff");
+
+            if ($time_diff > 0) {
+                push @{$cfg->{job_queue}}, {command => $command, date => time + $time_diff, handled => 0};
+            }
+
+#syslog('news.err', 'added to job_queue');
+#syslog('news.err', Dumper($cfg->{job_queue}));
         }
     }
 }
@@ -449,21 +476,21 @@ if ($ip eq '108.188.18.110' || $ip eq '5.101.0.209') {
         push @{$cfg->{data}{reject_list}{$ip}{reason}}, $reason;
         $cfg->{data}{reject_list}{$ip}{date} = $date;
 
-syslog('news.err', "attack from '$ip' updated") if $deb;
         $handled = 1;
     }
-    else {
+    
+    if (!$handled) {
         add_reject_rule($cfg, $ip);
         $cfg->{data}{reject_list}{$ip} = {
             number => $cfg->{reject_number},
             date   => $date,
-            reason => \($reason),
+            reason => [$reason],
         };
         $handled = 1;
         syslog('news.err', "new attack found from '$ip' \@ $date");
     }
     
-    if ($handled) {
+    if (!$handled) {
         syslog('news.err', "attack from '$ip' wasn't handled");
     }
 }
@@ -551,10 +578,10 @@ sub handle_cmd($$$)
     my @args = split('/', $args);
     my $ip = shift @args;
 
-    syslog('news.err', "received '$cmd/$ip' command");
+syslog('news.err', "received '$cmd/$ip $args' command");
 
     if ('list' eq $cmd) {
-     syslog('news.err', "add-white/ip, show-list, block-ed, unblock-ed, clear-list, unblock-ip/ip, block-ip/ip, reset-fw");
+        syslog('news.err', "add-white/ip, show-list, block-ed, unblock-(ed|tv|xbox|gogle)[/hours], clear-list, unblock-ip/ip, block-ip/ip, reset-fw");
     }
     elsif ('add-white' eq $cmd) {
         syslog('news.err', "going to add '$ip' into white list");
@@ -596,7 +623,7 @@ sub handle_cmd($$$)
     elsif ($cmd =~ /^block-(.*?)$/) {
         my $type = $1;
         if (exists($cfg->{data}{block}{$type})) {
-            block_type($cfg, $type, \@args);
+            block_type($cfg, $type, [$args]);
             syslog('news.err', "$type blocked");
             update_fw_file($cfg);
         }
@@ -607,9 +634,17 @@ sub handle_cmd($$$)
         }
     }
     elsif ($cmd =~ /^unblock-(.*?)$/) {
+
         my $type = $1;
+
+#syslog('news.err', "unblock $type");
+#syslog('news.err', Dumper($cfg->{data}{block}));
+
         if (exists($cfg->{data}{block}{$type})) {
-            unblock_type($cfg, $type, \@args);
+
+#syslog('news.err', "$type args".Dumper($args));
+
+            unblock_type($cfg, $type, [$args]);
             syslog('news.err', "$type unblocked");
             update_fw_file($cfg);
         }
@@ -666,7 +701,33 @@ sub parse_dhcpd_config($)
         print $@."\n";
     }
 
-    my @hosts = split(/(host.*?\})/si, $lines);
+    my @hosts;
+    my $line = '';
+    my $add_flag = 0;
+    my @lines = split("\n", $lines);
+    
+    for my $l (@lines) {
+        if ($l =~ /^host/) {
+            $add_flag = 1;
+        }
+        elsif ($l =~ /}/) {
+            $add_flag = 2;
+        }
+
+        if ($add_flag > 0) {
+            $line .= $l;
+
+            if (2 == $add_flag) {
+                push @hosts, $line;
+                $add_flag = 0;
+                $line = '';
+            }
+        }
+    }
+
+#    my @hosts = split(/^(host.*?\})/si, $lines);
+
+#print Dumper(\@hosts);
 
     for my $l (@hosts) {
         if ($l =~ /^host/) {
@@ -675,7 +736,7 @@ sub parse_dhcpd_config($)
             my $data = parse_host_line($l);
             my $key = $data->{group_name};
 
-syslog('news.err', "data ".Dumper($data));
+#print Dumper($data);
 
             unless (exists($cfg->{data}{block}{$key})) {
                 $cfg->{data}{block}{$key}{info} = [];
@@ -684,7 +745,7 @@ syslog('news.err', "data ".Dumper($data));
         
             push @{$cfg->{data}{block}{$key}{info}}, {ip => $data->{ip}, rule_number => $data->{rule_number}};
 
-#syslog('news.err', "$key ".Dumper($cfg->{data}{block}{$key}));
+#print "$key ".Dumper($cfg->{data}{block}{$key});
 
         }
     };
@@ -727,4 +788,40 @@ sub find_ip($)
     }
 
     ($ip, $rule_number);
+}
+
+#
+sub parse_time($)
+{
+    my ($d) = @_;
+    my $type = 'h';
+    my $time = 0;
+
+    if ($d =~ /^(\d.*)(\w)$/) {
+        print "found type $2\n";
+        $type = $2;
+        $time = int $1;
+    }
+    else {
+        $time = int $d;
+    }
+
+    if ('m' eq $type) {
+        $time *= 60;
+    }
+    elsif ('h' eq $type) {
+        $time *= 3600;
+    }
+    elsif ('d' eq $type) {
+        $time *= 3600 * 24;
+    }
+    elsif ('w' eq $type) {
+        $time *= 3600 * 24 * 7;
+    }
+    else {
+        warn "unknown type '$type' will accept as an hours";
+        $time *= 3600;
+    }
+
+    $time;
 }
