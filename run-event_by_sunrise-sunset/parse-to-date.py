@@ -177,6 +177,9 @@ if 1 == debug:
 sunrise = Time(srss['sunrise'])
 sunrise.addMinutes(time_offset + dst_offset)
 
+total_off = Time(srss['sunrise'])
+total_off.addMinutes(60)
+
 if sunrise - start_time > 10:
     cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=on -ip=10.1.1.64" | at 0{0}'.format(start_time.get())
     print(cmd)
@@ -188,6 +191,12 @@ if sunrise - start_time > 10:
     if 0 == debug:
         syslog.syslog(syslog.LOG_PID, cmd)
         os.system(cmd)
+
+cmd = 'echo "/usr/bin/perl /usr/home/ccpro/projects/wifi-on-off/tplink_hs110_cmd.pl -command=off -ip=10.1.1.64" | at 0{0}'.format(total_off.get())
+print(cmd)
+if 0 == debug:
+    syslog.syslog(syslog.LOG_PID, cmd)
+    os.system(cmd)
 
 sunset = Time(srss['sunset'])
 sunset.addMinutes(-time_offset + dst_offset)
