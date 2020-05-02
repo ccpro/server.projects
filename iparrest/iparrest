@@ -14,43 +14,24 @@ use Cwd;
 use File::Spec::Functions;
 use FileHandle;
 use JSON;
+use Sys::Hostname;
+use Socket;
+use List::Util qw(any);
 
 sub build_file_name($);
 sub add_ip_to_fw($$$$);
 sub remove_ip_from_fw($$);
 sub remove_ips_by_date_from_fw($$);
 sub rebuild_fw_ruleset($);
-sub handle_cmd($$$);
+sub handle_cmd($$$$$);
 sub reset_fw($);
 sub update_fw_file($);
 sub get_date($;$);
 sub parse_dhcpd_config($);
 sub parse_time($); 
-
-=pod
-           ed         => {
-                             blocked => 0,
-                             info => [
-                                      {ip => '10.1.1.120', rule_number => 200},
-                                      {ip => '10.1.1.121', rule_number => 201},
-                                      {ip => '10.1.1.122', rule_number => 202},
-                                      {ip => '10.1.1.129', rule_number => 210}, 
-                                      {ip => '10.1.1.130', rule_number => 220}
-                                     ]
-                         },
-           xbox       => {
-                             blocked => 0,
-                             info => [{ip => '10.1.1.131', rule_number => 300}, {ip => '10.1.1.132', rule_number => 310}]
-                         },
-           googlehome => {
-                             blocked => 0,
-                             info => [{ip => '10.1.1.75', rule_number => 400}]
-                         },
-           tv         => {
-                             blocked => 0,
-                             info => [{ip => '10.1.1.128', rule_number => 500}]
-                         },
-=cut
+sub get_gateaway_ip();
+sub get_gateaway_mask($);
+sub parse_log_line($$);
 
 my $cfg = {
     iface         => 're0',
@@ -68,9 +49,10 @@ my $cfg = {
     json          => JSON->new->allow_nonref,
 
     data	=> {
-       white_list   => [],
+       white_list   => [get_gateaway_ip()],
        reject_list  => {},
-       block        => {}
+       block        => {},
+       log          => [],
     },
     
     job_queue	=> [],
@@ -88,7 +70,8 @@ my $cfg = {
         'oct' => 10,
         'nov' => 11,
         'dec' => 12 
-    }
+    },
+    gateaway_ip  => get_gateaway_ip()
 };
 
 my $pf = '/var/run/iparrest.pid';
@@ -211,7 +194,7 @@ sub run {
                     block_type($cfg, $type);
                 }
                 else {
-                    unblock_type($cfg, $type);
+                    unblock_type($cfg, $type, '127.0.0.1');
                 }
 
 #syslog('news.err', "block $type ".Dumper($cfg->{data}{block}{$type}{blocked}));
@@ -228,6 +211,8 @@ sub run {
             syslog('news.err', 'update_fw_file '.$@);
         }
 
+        my $gateaway_mask = get_gateaway_mask($cfg);
+syslog('news.err', "gateaway_mask $gateaway_mask");
         while(1) {
             my ($month) = (localtime())[4];
             my $fname = build_file_name($cfg);
@@ -235,20 +220,24 @@ sub run {
 
             eval {            
             my $tail = File::Tail->new(name => $fname, interval => 20);
-#            my $tail = File::Tail->new(name => $fname, interval => 20, maxinterval=>300, adjustafter=>7);
             my $line;
-            my $deb = 0;
             while (defined($line = $tail->read())) {
                 chomp $line;
 
-if ($line =~ /^108\.188\.18\.110\s.*?$/) {
-    $deb = 1;
-    syslog('news.err', "found unhandled line");
-} else {
-    $deb = 0;
-}
+                my ($ip, $date, $is_command, $command, $cmd_params, $is_attack, $attack, $code) = 
+                    parse_log_line($cfg, $line);
 
-                if ($line =~ /GET \/iparrest\/(.*)\/(.*?) HTTP/) {
+                if ($is_command) {
+                    handle_cmd($cfg, $ip, $date, $command, $cmd_params);
+                }
+                elsif ($is_attack) {
+                    add_ip_to_fw($cfg, $ip, $line, $date);
+                    update_fw_file($cfg);
+                }
+
+=pod
+                if ($line =~ /^10\.1\..*GET \/iparrest\/(.*)\/(.*?) HTTP/) {
+syslog('news.err', "handle cmd $1 $2");
                     handle_cmd($cfg, $1, $2);
                 } 
                 elsif ($line =~ '^(.*)\s-\s-\s\[(.*)\].*\s40[450]\s.*?$' && 
@@ -256,16 +245,18 @@ if ($line =~ /^108\.188\.18\.110\s.*?$/) {
                     $line !~ /delby/ &&
                     $line !~ /\/lj\//) {
 
-if ($deb) {
-    syslog('news.err', "line in in");
-}
-
-                 my $skip = 0;
-                    for my $ip (@{$cfg->{data}{white_list}}) {
-                        if ($1 eq $ip) {
-                            $skip = 1;
-                            last;
+                    my $skip = 0;
+                    if (index($1, $gateaway_mask) == -1) {
+                        for my $ip (@{$cfg->{data}{white_list}}) {
+                            if ($1 eq $ip) {
+                                $skip = 1;
+                                last;
+                            }
                         }
+                    } else {
+                        $skip = 1;
+                        my $index = index($1, $gateaway_mask);
+                        syslog('news.err', "skip for gateaway mask $1 :: $gateaway_mask :: $index");
                     }
 
 if ($deb) {
@@ -277,7 +268,8 @@ if ($deb) {
                         update_fw_file($cfg);
                      }
                }
-               
+=cut
+
                last if ($month != (localtime())[4]);
 
 #syslog('news.err', 'job_queue');
@@ -289,7 +281,7 @@ my $diff = $c->{date} - time;
 
                     if (!$c->{handled} && $c->{date} < time) {
 #syslog('news.err', "job '$c->{command}' found in job_queue");
-                        handle_cmd($cfg, $c->{command}, '');
+                        handle_cmd($cfg, $c->{ip}, get_date($cfg), $c->{command}, '');
                         $c->{handled} = 1;
                     }
                 }
@@ -424,9 +416,9 @@ sub block_type($$;$)
     $cfg->{data}{block}{$type}{blocked} = 1;
 }
 
-sub unblock_type($$;$)
+sub unblock_type($$$;$)
 {
-    my ($cfg, $type, $args) = @_;
+    my ($cfg, $type, $ip, $args) = @_;
     my @unblock_info;
     
     for my $i (@{$cfg->{data}{block}{$type}{info}}) {
@@ -450,7 +442,7 @@ sub unblock_type($$;$)
 #syslog('news.err', "time_to_block : $time_to_block, time_diff : $time_diff");
 
             if ($time_diff > 0) {
-                push @{$cfg->{job_queue}}, {command => $command, date => time + $time_diff, handled => 0};
+                push @{$cfg->{job_queue}}, {command => $command, date => time + $time_diff, handled => 0, ip => $ip};
             }
 
 #syslog('news.err', 'added to job_queue');
@@ -571,14 +563,16 @@ qq^
    `$cfg->{natd}`;
 }
 
-sub handle_cmd($$$)
+sub handle_cmd($$$$$)
 {
-    my ($cfg, $cmd, $args) = @_;
+    my ($cfg, $ip_sender, $date, $cmd, $args) = @_;
     
     my @args = split('/', $args);
     my $ip = shift @args;
 
 syslog('news.err', "received '$cmd/$ip $args' command");
+
+    push @{$cfg->{data}{log}}, {ip => $ip_sender, cmd => $cmd, date => $date, args => $args};
 
     if ('list' eq $cmd) {
         syslog('news.err', "add-white/ip, show-list, block-ed, unblock-(ed|tv|xbox|gogle)[/hours], clear-list, unblock-ip/ip, block-ip/ip, reset-fw");
@@ -824,4 +818,72 @@ sub parse_time($)
     }
 
     $time;
+}
+
+sub get_gateaway_ip()
+{
+    my($addr)=inet_ntoa((gethostbyname(hostname))[4]);
+    
+    $addr;
+}
+
+sub get_gateaway_mask($)
+{
+    my ($cfg) = @_;
+    my $mask = '';
+    
+    my @parts = split('\.', $cfg->{gateaway_ip}||'');
+    if (scalar(@parts) > 2) {
+        $mask = "$parts[0].$parts[1].";
+    }
+
+    $mask;
+}
+
+sub parse_log_line($$)
+{
+    my ($cfg, $line) = @_;
+    my ($ip, $date, $is_command, $command, $param, $is_attack, $attack, $code) = ('', '', 0, '', '', 0, '', 0);
+    
+    # 76.22.116.179 - - [23/Apr/2020:09:38:48 -0700] "GET /iparrest/unblock-ed/15h HTTP/1.1" 404 196
+    if ($line =~ /^(\d*\.\d*\.\d*\.\d*)\s-\s-\s\[(.*)\]\s"(.*)"\s(\d*)\s(\d*)/) {
+        print "ip::$1, date::$2, action::$3, code::$4, size::$5\n";
+        
+        $ip = $1;
+        $code = $4;
+        $date = get_date($cfg, $2);
+        my $action = $3;
+
+        if ($ip =~ /10\.1\./ && $action =~ /GET \/iparrest\/(.*)\/(.*?) HTTP/) {
+            $is_command = 1;
+            $command = $1;
+            $param = $2;
+            
+            print "command '$command' '$param'\n";
+        }
+        elsif (any {$code == $_} (400, 404, 405)) {
+ 
+            if ($ip =~ /10\.1\./ || 
+                $action =~ /delby/ ||
+                $action =~ /\/lj\// ||
+                any {$_ eq $ip} @{$cfg->{data}{white_list}}) {
+                print "not an issue\n";
+            }
+            else {
+                $is_attack = 1;
+                $attack = $3;
+                
+                print "attack '$attack'\n";
+            }
+        } 
+        else {
+            print "just a line\n";
+        }
+        
+    }
+    else {
+        print "line wans't parsed\n";
+    }
+
+    ($ip, $date, $is_command, $command, $param, $is_attack, $attack, $code);    
 }
