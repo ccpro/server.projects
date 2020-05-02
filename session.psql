@@ -1,4 +1,4 @@
-drop table session;
+drop table if exists session;
 
 create table session (
    session varchar(64) not null,
@@ -9,3 +9,4 @@ create table session (
 );
 
 create unique index ss_u_idx on session(session);
+

@@ -1,0 +1,13 @@
+drop table if exists smarthome_log;
+drop sequence if exists smarthome_log_seq_id;
+
+create sequence smarthome_log_seq_id;
+create table smarthome_log(
+    id     int DEFAULT nextval('smarthome_log_seq_id') PRIMARY KEY,
+    device varchar(64) NOT NULL,
+    action varchar(256) NOT NULL,
+    ip     varchar(32) not null default '',
+    date   timestamp not null default CURRENT_timestamp
+);
+
+--create unique index car_owner_idx onsmarthome_log(car_id, owner_id);

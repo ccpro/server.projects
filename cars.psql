@@ -1,12 +1,12 @@
-drop table car_owners;
-drop sequence car_owners_seq_id;
+drop table if exists car_owners;
+drop sequence if exists car_owners_seq_id;
 
 create sequence car_owners_seq_id;
 create table car_owners(
-id       int DEFAULT nextval('car_owners_seq_id') PRIMARY KEY,
-car_id   int not null references cars(car_id),
-owner_id int not null references users(id),
-rights   smallint not null default 0
+    id       int DEFAULT nextval('car_owners_seq_id') PRIMARY KEY,
+    car_id   int not null references cars(car_id),
+    owner_id int not null references users(id),
+    rights   smallint not null default 0
 );
 
 create unique index car_owner_idx on car_owners(car_id, owner_id);
